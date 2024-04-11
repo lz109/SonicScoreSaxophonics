@@ -1,0 +1,27 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles/style.css' %}" />
+<div class="login-page">
+  <div class="description">
+    <form class="description-form">
+      <p class="message"></p>
+    </form>
+  </div>
+  <div class="form description-block">
+    <h2>Welcome to Saxophone Sonic Score!</h2>
+    <p class="description">
+      Saxophone Sonic Score is a supplementary system that helps beginners to
+      get familiar with the saxophone.
+    </p>
+    <p class="description">
+      Please use this app with our hardware system for the practice function.
+      Without the hardware system, you could only experience the learn function.
+    </p>
+    <p class="description">
+      We recommend you to register a user account to keep track of your history
+      and statistics when practicing.
+    </p>
+    <a href="/signin" class="button-style">Sign In</a>
+    <a href="/signup" class="button-style">Sign Up</a>
+    <a href="/learn" class="button-style">Continue As Guest</a>
+  </div>
+</div>

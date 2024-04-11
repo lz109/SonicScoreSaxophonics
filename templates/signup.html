@@ -1,0 +1,21 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles/style.css' %}" />
+<div class="login-page">
+  {% block content%} {{ msg }}
+  <div class="form">
+    <form class="register-form" method="post">
+      {% csrf_token %} {% for field in form %}
+      <p>
+        {{ field.label_tag }}<br>
+        {{ field }}
+        {% for error in field.errors %}
+          <p style="color: red">{{ error }}</p>
+        {% endfor %}
+      </p>
+    {% endfor %}
+    <button type="submit" class="btn-signup">Sign up</button>
+    <p class="message">Already have an account? <a href="/signin">Sign In</a></p>
+    </form>
+    {% endblock %}
+  </div>
+</div>

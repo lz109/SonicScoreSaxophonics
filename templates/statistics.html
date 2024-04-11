@@ -1,0 +1,20 @@
+{% include 'navbar.html' %} {% load static %}
+<html>
+  <header>
+    <link rel="stylesheet" href="{% static 'styles/style.css' %}" />
+    <title>User Statistics</title>
+  </header>
+  <body>
+    {% if user.is_authenticated %}
+    <p class="stats">You are logged in as {{ user.username}}</p>
+    <p class="stats">
+      Total Practice Counts: <strong>{{ total_practice_count }}</strong>
+    </p>
+    <p class="stats">
+      Entire Range Practice Counts: <strong>{{ practice_count }}</strong>
+    </p>
+    {% else %}
+    <p class="stats">Welcome, Guest!</p>
+    {% endif %}
+  </body>
+</html>

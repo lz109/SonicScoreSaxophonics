@@ -1,0 +1,126 @@
+@import url(https://fonts.googleapis.com/css?family=Roboto:300);
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.practice-page {
+  padding: 1%;
+}
+
+.song-name {
+  text-align: center;
+  border: 2px solid black;
+  padding: 0;
+  margin-bottom: 1%;
+}
+
+.fingering-section,
+.notes-section,
+.info-section,
+.explanation-feedback-section {
+  display: flex;
+  justify-content: center;
+}
+
+.info-section {
+  max-height: 50%;
+}
+
+.fingering-column,
+.indicator-column,
+.notes-section,
+.explanation-box,
+.feedback-box {
+  text-align: center;
+  flex-grow: 1;
+}
+
+.indicator-column {
+  width: 8%;
+}
+
+.fingering-column {
+  width: 17%;
+}
+
+.notes-section {
+  width: 45%;
+}
+
+.indicator-column img {
+  width: 100%;
+  height: 80%;
+  object-fit: cover;
+}
+
+.notes-section img {
+  width: 100%;
+  height: 105%;
+  object-fit: cover;
+}
+
+.notes-section {
+  flex-direction: column;
+  max-width: 40%;
+  max-height: 50%;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.note-diagram {
+  max-height: 40%;
+}
+
+.fingering-section {
+  max-width: 60%;
+  max-height: 50%;
+}
+
+.check-song {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.explanation-feedback-section {
+  display: flex;
+}
+
+.explanation-box,
+.feedback-box {
+  border: 2px solid black;
+  margin: 1%;
+  padding: 0.5%;
+  flex-grow: 1;
+  max-height: 50%;
+}
+
+.explanation-box {
+  display: flex;
+  max-width: 60%;
+}
+
+.left-hand,
+.right-hand {
+  width: 50%;
+}
+
+.feedback-box {
+  display: flex;
+  max-width: 40%;
+  justify-content: center;
+  align-items: center;
+}
+
+text {
+  font-size: 18px;
+  font-family: "Roboto";
+}
+
+svg {
+  max-width: 95%;
+  max-height: 90%;
+}

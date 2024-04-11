@@ -1,0 +1,13 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'styles/style.css' %}" />
+<div class="login-page">
+  {% block content%} {{ msg }}
+  <div class="form">
+    <form class="login-form" method="post">
+      {% csrf_token %} {{ form.as_p }}
+      <button>Log In</button>
+      <p class="message">Create a new account? <a href="/signup">Sign Up</a></p>
+    </form>
+    {% endblock %}
+  </div>
+</div>

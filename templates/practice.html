@@ -1284,7 +1284,7 @@
             try {
               // This call is now inside a user gesture event
               const port = await navigator.serial.requestPort();
-              await port.open({ baudRate: 300 });
+              await port.open({ baudRate: 1200 });
 
               const textDecoder = new TextDecoderStream();
               const readableStreamClosed = port.readable.pipeTo(

@@ -1014,6 +1014,7 @@
         </div>
         <div class="notes-section">
           <div><button id="startButton">Start</button></div>
+          <div><button id="connectButton">Connect</button></div>
           <div>
             <a
               href="https://www.youtube.com/watch?v=ZuJXffpXs08"
@@ -1276,8 +1277,49 @@
           });
       }
 
-      // Automatically send get requests every 0.2 seconds to trigger current updates
-      setInterval(sendHttpRequest, 100);
+      document
+        .getElementById("connectButton")
+        .addEventListener("click", async function () {
+          if ("serial" in navigator) {
+            try {
+              // This call is now inside a user gesture event
+              const port = await navigator.serial.requestPort();
+              await port.open({ baudRate: 9600 });
+
+              const reader = port.readable.getReader();
+              const decoder = new TextDecoderStream();
+              reader.pipeTo(decoder.writable);
+              const inputStream = decoder.readable;
+              const readerStream = inputStream.getReader();
+
+              async function readData() {
+                const { value, done } = await readerStream.read();
+                if (done) {
+                  readerStream.releaseLock();
+                  return;
+                }
+                //document.getElementById("dataLog").textContent += value;
+                console.log(value);
+              }
+
+              setInterval(readData, 100);
+            } catch (err) {
+              //document.getElementById("dataLog").textContent =
+              //"Error: " + err.message;
+              console.log(err.message);
+            }
+          } else {
+            //document.getElementById("dataLog").textContent =
+            //"Web Serial API not supported.";
+            console.log("not supported");
+          }
+        });
+
+      // Automatically send get requests every 0.1 second to trigger current updates
+      // setInterval(sendHttpRequest, 100);
+
+      // Automatically read from serial every 0.1 second
+      // setInterval(readFromSerial, 100);
 
       document.addEventListener("DOMContentLoaded", function () {
         document

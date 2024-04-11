@@ -7,6 +7,7 @@ from django.shortcuts import HttpResponseRedirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+import subprocess
 from .models import CustomUser
   
 
@@ -15,6 +16,14 @@ fingerings = []
 index = -1
 currFingering = "00000000000000000000000"
 currNote = "notDetected"
+
+# process the audio with a .wav file
+def process_audio(file):
+    script_path = 'static/audioDetection/Demo.py'
+    result = subprocess.run(['python', script_path, file], capture_output=True, text=True)
+    integrated_audio = result.stdout.splitlines()[0]
+    print(integrated_audio)
+    return integrated_audio
 
 
 def load_data():
@@ -28,6 +37,8 @@ def load_data():
 
 # later replace it, each time press start send a request to load the data
 load_data()
+
+# process_audio("static/audio/test.wav")
 
 def home(request): 
     return render(request, "home.html") 

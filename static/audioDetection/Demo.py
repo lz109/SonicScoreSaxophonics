@@ -185,15 +185,15 @@ def main(audio_path):
     tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    print("Array of Notes:", notes)
+    # print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    print("Rhythm Array:", rhythm_array)
+    # print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array)
-    print("result:", integrated_notes)
+    print(integrated_notes)
 
-    plot_frequency_curve(frequencies, sr, hop_length)
+    # plot_frequency_curve(frequencies, sr, hop_length)
 
 
 if __name__ == "__main__":

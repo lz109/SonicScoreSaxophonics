@@ -1284,33 +1284,30 @@
             try {
               // This call is now inside a user gesture event
               const port = await navigator.serial.requestPort();
-              await port.open({ baudRate: 9600 });
+              await port.open({ baudRate: 300 });
 
-              const reader = port.readable.getReader();
-              const decoder = new TextDecoderStream();
-              reader.pipeTo(decoder.writable);
-              const inputStream = decoder.readable;
-              const readerStream = inputStream.getReader();
+              const textDecoder = new TextDecoderStream();
+              const readableStreamClosed = port.readable.pipeTo(
+                textDecoder.writable
+              );
+              const reader = textDecoder.readable.getReader();
+              let buffer = "";
 
               async function readData() {
-                const { value, done } = await readerStream.read();
+                const { value, done } = await reader.read();
                 if (done) {
                   readerStream.releaseLock();
                   return;
                 }
-                //document.getElementById("dataLog").textContent += value;
-                console.log(value);
+                buffer += value;
+                console.log(buffer);
               }
 
               setInterval(readData, 100);
             } catch (err) {
-              //document.getElementById("dataLog").textContent =
-              //"Error: " + err.message;
               console.log(err.message);
             }
           } else {
-            //document.getElementById("dataLog").textContent =
-            //"Web Serial API not supported.";
             console.log("not supported");
           }
         });

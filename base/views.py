@@ -43,7 +43,7 @@ load_data()
 def home(request): 
     return render(request, "home.html") 
   
-def projects(request): 
+def learn(request): 
     return render(request, "learn.html") 
 
 def practice(request):
@@ -89,6 +89,16 @@ def statistics(request):
         context = {'practice_count': practice_count, "total_practice_count": total_practice_count}
         return render(request, "statistics.html", context)
     return render(request, "statistics.html")
+
+def audio_processing(request):
+    # later replace it with a file generated from request
+    file_path = "static/audio/test.wav"
+    try:
+        # Process the audio file
+        result = process_audio(file_path)
+        return JsonResponse({'status': 'success', 'result': result})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 def signup(request):
     if request.user.is_authenticated:

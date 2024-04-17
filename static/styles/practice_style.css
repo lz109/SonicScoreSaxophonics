@@ -124,3 +124,12 @@ svg {
   max-width: 95%;
   max-height: 90%;
 }
+
+#curr-note,
+#note-message,
+#feedback,
+#currIndicator,
+#currFingering,
+#feedback-box {
+  display: none;
+}

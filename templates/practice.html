@@ -12,13 +12,13 @@
       </div>
       <div class="info-section">
         <div class="fingering-section">
-          <div class="indicator-column">
+          <div class="indicator-column" id="refIndicator">
             <img
               src="{% static 'images/handIndicator.png' %}"
               alt="Hand Indicator"
             />
           </div>
-          <div class="fingering-column">
+          <div class="fingering-column" id="refFingering">
             <?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <svg
               version="1.1"
@@ -511,14 +511,14 @@
               &#10;
             </svg>
           </div>
-          <div class="indicator-column">
+          <div class="indicator-column" id="currIndicator">
             <img
               id="correct-indicator"
               src="{% static 'images/correctIndicator.png' %}"
               alt="Correct Indicator"
             />
           </div>
-          <div class="fingering-column">
+          <div class="fingering-column" id="currFingering">
             <?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <svg
               version="1.1"
@@ -1013,8 +1013,10 @@
           </div>
         </div>
         <div class="notes-section">
-          <div><button id="startButton">Start</button></div>
           <div><button id="connectButton">Connect</button></div>
+          <div><button id="startButton">Start</button></div>
+          <div><button id="endButton">End</button></div>
+          <div><button id="replayButton">Replay</button></div>
           <div>
             <a
               href="https://www.youtube.com/watch?v=ZuJXffpXs08"
@@ -1056,7 +1058,7 @@
             /></text>
           </div>
         </div>
-        <div class="feedback-box">
+        <div class="feedback-box" id="feedback-box">
           <text id="feedback">Press Start to start practicing.</text>
         </div>
       </div>
@@ -1065,7 +1067,7 @@
     <script>
       let intervalId = null;
       function updateRefFingering(refFingering) {
-        for (let i = 0; i < refFingering.length; i++) {
+        for (let i = 0; i < 23; i++) {
           var path = "#Layer_1 " + "#refkey" + i;
           if (refFingering == "start" || refFingering == "end") {
             document.querySelector(path).setAttribute("fill", "white");
@@ -1277,41 +1279,6 @@
           });
       }
 
-      document
-        .getElementById("connectButton")
-        .addEventListener("click", async function () {
-          if ("serial" in navigator) {
-            try {
-              // This call is now inside a user gesture event
-              const port = await navigator.serial.requestPort();
-              await port.open({ baudRate: 1200 });
-
-              const textDecoder = new TextDecoderStream();
-              const readableStreamClosed = port.readable.pipeTo(
-                textDecoder.writable
-              );
-              const reader = textDecoder.readable.getReader();
-              let buffer = "";
-
-              async function readData() {
-                const { value, done } = await reader.read();
-                if (done) {
-                  readerStream.releaseLock();
-                  return;
-                }
-                buffer += value;
-                console.log(buffer);
-              }
-
-              setInterval(readData, 100);
-            } catch (err) {
-              console.log(err.message);
-            }
-          } else {
-            console.log("not supported");
-          }
-        });
-
       // Automatically send get requests every 0.1 second to trigger current updates
       // setInterval(sendHttpRequest, 100);
 
@@ -1319,6 +1286,39 @@
       // setInterval(readFromSerial, 100);
 
       document.addEventListener("DOMContentLoaded", function () {
+        const currNote = document.getElementById("curr-note");
+        const noteMessage = document.getElementById("note-message");
+        const feedbackBox = document.getElementById("feedback-box");
+        const currIndicator = document.getElementById("currIndicator");
+        const currFingering = document.getElementById("currFingering");
+        let port, reader;
+        let textDecoder = new TextDecoderStream();
+
+        // press connect button to connect
+        document
+          .getElementById("connectButton")
+          .addEventListener("click", async function () {
+            if ("serial" in navigator) {
+              try {
+                // This call is now inside a user gesture event
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 1200 });
+
+                port.readable.pipeTo(textDecoder.writable).catch((error) => {
+                  console.error("Stream pipe failed:", error);
+                  port.close();
+                });
+
+                console.log("Port connected and ready.");
+              } catch (err) {
+                console.error("Connection error:", err.message);
+              }
+            } else {
+              console.log("Serial not supported");
+            }
+          });
+
+        // press start button to read fingering and display reference fingering
         document
           .getElementById("startButton")
           .addEventListener("click", function () {
@@ -1329,14 +1329,103 @@
             document.getElementById("note-message").innerHTML =
               "The practice session will start soon.<br><br>";
             songReset();
+            currNote.style.display = "none";
+            noteMessage.style.display = "none";
+            feedbackBox.style.display = "none";
+            currIndicator.style.display = "none";
+            currFingering.style.display = "none";
+
+            if (reader) {
+              console.log("Reading already started.");
+              return;
+            }
+
+            if (textDecoder && textDecoder.readable) {
+              reader = textDecoder.readable.getReader();
+              readData();
+            } else {
+              console.log("Connect to the port first.");
+            }
+
+            async function readData() {
+              let buffer = "";
+              try {
+                while (true) {
+                  const { value, done } = await reader.read();
+                  if (done) {
+                    console.log("Stream closed");
+                    reader.releaseLock();
+                    break;
+                  }
+                  buffer += value;
+                  console.log(buffer);
+                }
+              } catch (error) {
+                console.error("Read error:", error);
+              } finally {
+                reader.releaseLock();
+                if (port) {
+                  await port.close();
+                  console.log("Port closed");
+                }
+              }
+            }
             updateRefNote("start");
             updateRefFingering("start");
+            updateRefDescription("start");
 
             setTimeout(function () {
               intervalId = setInterval(updateCurrentSong, 3000);
             }, 3000);
           });
+
+        // press end button to end displaying reference note
+        document
+          .getElementById("endButton")
+          .addEventListener("click", async function () {
+            if (intervalId !== null) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+            document.getElementById("note-message").innerHTML =
+              "The practice session has ended.<br><br>";
+            updateRefNote("end");
+            updateRefFingering("end");
+            updateRefDescription("end");
+
+            fetch("process", {
+              method: "GET",
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("response was not ok");
+                }
+                return response.json();
+              })
+              .then((data) => {
+                if (data.status === "success") {
+                  console.log("Audio processed successfully:", data.result);
+                  alert("Audio processed successfully: " + data.result);
+                } else {
+                  console.error("Error:", data.message);
+                  alert("Error processing audio: " + data.message);
+                }
+              })
+              .catch((error) => console.error("Fetch error:", error));
+          });
+
+        document
+          .getElementById("replayButton")
+          .addEventListener("click", function () {
+            currNote.style.display = "block";
+            noteMessage.style.display = "block";
+            feedbackBox.style.display = "block";
+            currIndicator.style.display = "block";
+            currFingering.style.display = "block";
+          });
       });
+
+      //
     </script>
     {% endblock %}
   </body>

@@ -111,30 +111,52 @@ def detect_rhythm(y, sr, tempo):
             rhythm_array.append(0)
     return rhythm_array, hop_length
 
+class Note:
+    def __init__(self, pitch, length):
+        self.pitch = pitch
+        self.length = length
+
+    def __repr__(self):
+        return f"{self.pitch}:{self.length}"
+
 def integrate_notes(noteList, beatList, tempo, beat_fraction=8):
     beat_duration = 60 / tempo  # Full beat duration in seconds
     fraction_duration = beat_duration / beat_fraction
 
-    integrated_notes = {}
+    integrated_notes = []
     current_note = None
     note_duration = 0
+    previous_note = None  # To track if the same note is played sequentially
 
     for note, beat in zip(noteList, beatList):
         if beat == 1:
-            if current_note:
-                integrated_notes[current_note] = integrated_notes.get(current_note, 0) + note_duration
-            current_note = note
-            note_duration = fraction_duration  # New note, reset duration to 1/8
-        else:
+            if (current_note != None):
+                current_note = note
+                if current_note == previous_note:
+                    note_duration += fraction_duration
+                else:
+                    # A new note starts, append the previous note and reset duration
+                    integrated_notes.append(Note(current_note, round(note_duration, 1)))
+                    current_note = note
+                    note_duration = fraction_duration
+            else:
+                # This is the first note
+                current_note = note
+                note_duration = fraction_duration
+        else: #beat==0
             # Note is held, increase its duration
             note_duration += fraction_duration
 
-    if current_note:
-        integrated_notes[current_note] = integrated_notes.get(current_note, 0) + note_duration
+        previous_note = current_note  # Update the previous note
 
-    for note in integrated_notes:
-        integrated_notes[note] = round(integrated_notes[note], 1)
-    
+    # Append the last note after the loop ends
+    if current_note:
+        if current_note == previous_note:
+            # Add the last note's duration to the last element if it's the same note
+            integrated_notes[-1].length += round(note_duration, 1)
+        else:
+            integrated_notes.append(Note(current_note, round(note_duration, 1)))
+
     return integrated_notes
 
 
@@ -185,15 +207,15 @@ def main(audio_path):
     tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    print("Array of Notes:", notes)
+    #print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    print("Rhythm Array:", rhythm_array)
+    #print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
     print("result:", integrated_notes)
 
-    plot_frequency_curve(frequencies, sr, hop_length)
+    #plot_frequency_curve(frequencies, sr, hop_length)
 
 
 if __name__ == "__main__":

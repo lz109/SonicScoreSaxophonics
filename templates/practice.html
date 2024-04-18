@@ -1291,8 +1291,9 @@
         const feedbackBox = document.getElementById("feedback-box");
         const currIndicator = document.getElementById("currIndicator");
         const currFingering = document.getElementById("currFingering");
-        let port, reader;
+        let port, reader, writer;
         let textDecoder = new TextDecoderStream();
+        let buffer = "";
 
         // press connect button to connect
         document
@@ -1301,8 +1302,8 @@
             if ("serial" in navigator) {
               try {
                 // This call is now inside a user gesture event
-                const port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 1200 });
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
 
                 port.readable.pipeTo(textDecoder.writable).catch((error) => {
                   console.error("Stream pipe failed:", error);
@@ -1321,7 +1322,8 @@
         // press start button to read fingering and display reference fingering
         document
           .getElementById("startButton")
-          .addEventListener("click", function () {
+          .addEventListener("click", async function () {
+            buffer = "";
             if (intervalId !== null) {
               clearInterval(intervalId);
               intervalId = null;
@@ -1334,6 +1336,20 @@
             feedbackBox.style.display = "none";
             currIndicator.style.display = "none";
             currFingering.style.display = "none";
+
+            if (port && port.writable) {
+              const writer = port.writable.getWriter();
+              const data = new TextEncoder().encode("42");
+              try {
+                await writer.write(data);
+                console.log("Message sent");
+              } catch (error) {
+                console.error("Failed to send message:", error);
+              }
+              writer.releaseLock();
+            } else {
+              console.log("Port not connected or not writable");
+            }
 
             if (reader) {
               console.log("Reading already started.");
@@ -1348,7 +1364,6 @@
             }
 
             async function readData() {
-              let buffer = "";
               try {
                 while (true) {
                   const { value, done } = await reader.read();
@@ -1358,7 +1373,6 @@
                     break;
                   }
                   buffer += value;
-                  console.log(buffer);
                 }
               } catch (error) {
                 console.error("Read error:", error);
@@ -1383,6 +1397,27 @@
         document
           .getElementById("endButton")
           .addEventListener("click", async function () {
+            console.log(buffer);
+            let lines = buffer.split("\n");
+            let numberOfLines = lines.length;
+            let writer;
+            console.log("Number of lines:", numberOfLines);
+
+            if (port && port.writable) {
+              try {
+                const writer = port.writable.getWriter();
+                const data = new TextEncoder().encode("22");
+                await writer.write(data);
+                console.log("End message sent");
+              } catch (error) {
+                console.error("Failed to send end message:", error);
+              } finally {
+                if (writer) {
+                  writer.releaseLock();
+                }
+              }
+            }
+
             if (intervalId !== null) {
               clearInterval(intervalId);
               intervalId = null;

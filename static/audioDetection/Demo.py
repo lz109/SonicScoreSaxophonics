@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter, lfilter
 from scipy.signal import butter, sosfilt, sosfreqz
 import sys
+from scipy.fft import rfft, rfftfreq
 
 def preprocess_audio_with_snr_check(audio_path):
     y, sr = librosa.load(audio_path)
@@ -21,7 +22,6 @@ def preprocess_audio_with_snr_check(audio_path):
     return filtered_audio, sr
 
 def calculate_snr(signal):
-
     return 60  
 
 def butter_bandpass(lowcut, highcut, sr, order=5):
@@ -47,63 +47,58 @@ def transpose_notes(notes, semitones=2):
             transposed_notes.append(None)
     return transposed_notes
 
-'''def detect_pitch(y_filtered, sr, tempo):
-    eighth_note_duration = 60 / tempo / 8
-    hop_length = int(eighth_note_duration * sr)  # Convert duration to number of samples
+def detect_pitch(data, sr, tempo):
+    # Calculate the duration of 1/8th of a beat in seconds
+    beat_duration = 60 / tempo  # Full beat duration in seconds
+    eighth_note_duration = beat_duration / 8
 
-    # Iterate using the sliding window
+    # Calculate the number of samples per 1/8th of a beat
+    samples_per_eighth_note = int(sr * eighth_note_duration)
+
     notes = []
-    frequencies = []  
-    for i in range(0, len(y_filtered) - hop_length, hop_length):
-        window = y_filtered[i:i + hop_length]
-        D = librosa.stft(window)
+    spectrogram_data = []
+    dominant_frequencies = []
 
-        magnitude = np.abs(D)
-        max_freq_index = np.argmax(magnitude, axis=0)
-        freqs = librosa.fft_frequencies(sr=sr)
-        pitch = freqs[max_freq_index]
+    # Process each 1/8th beat segment
+    for start in range(0, len(data), samples_per_eighth_note):
+        end = start + samples_per_eighth_note
+        data_slice = data[start:end]
 
-        # Convert pitch to music note
-        note = librosa.hz_to_note(pitch[0])
-        notes.append(note)
-        frequencies.append(pitch[0])
-    transposed_notes = transpose_notes(notes)
-        
-    return transposed_notes, frequencies'''
+        # Pad the last segment if necessary
+        if len(data_slice) < samples_per_eighth_note:
+            data_slice = np.pad(data_slice, (0, samples_per_eighth_note - len(data_slice)), mode='constant')
 
-def detect_pitch(y, sr, tempo):
-    # Calculate hop length as 1/8th of a beat
-    beat_duration = 60 / tempo  # Duration of a beat in seconds
-    eighth_note_duration = beat_duration / 8  # Duration of 1/8th of a beat
-    hop_length = int(sr * eighth_note_duration)  # Convert to samples
+        # Apply a window to the slice
+        window = np.hanning(len(data_slice))
+        data_windowed = data_slice * window
 
-    '''interval_duration = 0.125  # 1/8th of a beat
-    hop_length = int(interval_duration * sr)'''
-    
-    # Compute STFT
-    D = librosa.stft(y, hop_length=hop_length, n_fft=2048)
-    magnitude = np.abs(D)
-    
-    # Find frequencies with maximum magnitude in each frame
-    max_freq_indices = np.argmax(magnitude, axis=0)
-    freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
-    pitches = freqs[max_freq_indices]
+        # Fourier Transform
+        yf = rfft(data_windowed)
+        xf = rfftfreq(len(data_windowed), 1 / sr)
 
-    # Filter out non-positive frequencies
-    valid_pitches = pitches[(pitches > 50) & (pitches < 1500)]
-    
-    # Convert valid pitches to music notes
-    notes = [librosa.hz_to_note(pitch) for pitch in valid_pitches]
-    transposed_notes = transpose_notes(notes)
-    
-    return transposed_notes, valid_pitches
+        # Calculate dB levels of the frequency components
+        yf_db = 20 * np.log10(np.abs(yf) + 1e-6)
+
+        # Append absolute values to spectrogram data (for visualization, if needed)
+        spectrogram_data.append(yf_db)
+
+        # Get the most dominant frequency
+        idx = np.argmax(np.abs(yf))
+        dominant_freq = xf[idx]
+        dominant_freq_db = yf_db[idx]
+        db_threshold = 20
+        # Filter and convert frequency to music note if above the dB threshold and significantly above zero
+        if dominant_freq_db > db_threshold and dominant_freq > 90.0 and dominant_freq < 700:
+            note = librosa.hz_to_note(dominant_freq)
+            notes.append(note)
+            dominant_frequencies.append(dominant_freq)
+
+    return notes, dominant_frequencies
 
 def detect_rhythm(y, sr, tempo):
     eighth_note_duration = 60 / tempo / 8
     hop_length = int(eighth_note_duration * sr)
 
-    '''interval_duration = 0.125  # 1/8th of a beat
-    hop_length = int(interval_duration * sr)'''
     rhythm_array = []
     # Iterate through the signal with sliding window
     for i in range(0, len(y) - hop_length, hop_length):
@@ -116,8 +111,10 @@ def detect_rhythm(y, sr, tempo):
             rhythm_array.append(0)
     return rhythm_array, hop_length
 
+def integrate_notes(noteList, beatList, tempo, beat_fraction=8):
+    beat_duration = 60 / tempo  # Full beat duration in seconds
+    fraction_duration = beat_duration / beat_fraction
 
-def integrate_notes(noteList, beatList):
     integrated_notes = {}
     current_note = None
     note_duration = 0
@@ -127,14 +124,17 @@ def integrate_notes(noteList, beatList):
             if current_note:
                 integrated_notes[current_note] = integrated_notes.get(current_note, 0) + note_duration
             current_note = note
-            note_duration = 1/8  # New note, reset duration to 1/8
+            note_duration = fraction_duration  # New note, reset duration to 1/8
         else:
             # Note is held, increase its duration
-            note_duration += 1/8
+            note_duration += fraction_duration
 
     if current_note:
         integrated_notes[current_note] = integrated_notes.get(current_note, 0) + note_duration
 
+    for note in integrated_notes:
+        integrated_notes[note] = round(integrated_notes[note], 1)
+    
     return integrated_notes
 
 
@@ -185,15 +185,15 @@ def main(audio_path):
     tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    # print("Array of Notes:", notes)
+    print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    # print("Rhythm Array:", rhythm_array)
+    print("Rhythm Array:", rhythm_array)
 
-    integrated_notes = integrate_notes(notes, rhythm_array)
-    print(integrated_notes)
+    integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
+    print("result:", integrated_notes)
 
-    # plot_frequency_curve(frequencies, sr, hop_length)
+    plot_frequency_curve(frequencies, sr, hop_length)
 
 
 if __name__ == "__main__":

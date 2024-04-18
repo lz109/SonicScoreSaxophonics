@@ -1303,7 +1303,7 @@
               try {
                 // This call is now inside a user gesture event
                 port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 9600 });
+                await port.open({ baudRate: 300 });
 
                 port.readable.pipeTo(textDecoder.writable).catch((error) => {
                   console.error("Stream pipe failed:", error);
@@ -1339,7 +1339,7 @@
 
             if (port && port.writable) {
               const writer = port.writable.getWriter();
-              const data = new TextEncoder().encode("42");
+              const data = new TextEncoder().encode("4");
               try {
                 await writer.write(data);
                 console.log("Message sent");
@@ -1406,7 +1406,7 @@
             if (port && port.writable) {
               try {
                 const writer = port.writable.getWriter();
-                const data = new TextEncoder().encode("22");
+                const data = new TextEncoder().encode("2");
                 await writer.write(data);
                 console.log("End message sent");
               } catch (error) {

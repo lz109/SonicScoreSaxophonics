@@ -213,7 +213,7 @@ def main(audio_path):
     #print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
-    print("result:", integrated_notes)
+    print(integrated_notes)
 
     #plot_frequency_curve(frequencies, sr, hop_length)
 

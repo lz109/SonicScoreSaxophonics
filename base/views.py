@@ -22,8 +22,21 @@ def process_audio(file):
     script_path = 'static/audioDetection/Demo.py'
     result = subprocess.run(['python', script_path, file], capture_output=True, text=True)
     integrated_audio = result.stdout.splitlines()[0]
-    print(integrated_audio)
-    return integrated_audio
+    output = ""
+    for s in integrated_audio:
+        if s == "[" or s == "]" or s == "'" or s == " ":
+            continue
+        elif s == ":":
+            output += ","
+        elif s == ",":
+            output += "\n"
+        else:
+            output += s
+    output_file_path = 'static/results/audio_output.txt'  # Adjust path as necessary
+
+    with open(output_file_path, 'w') as file:
+        file.write(output)
+    return output
 
 
 def load_data():

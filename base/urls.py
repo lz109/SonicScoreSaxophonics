@@ -12,5 +12,6 @@ urlpatterns = [
     path('practice/update', views.practice_update, name='update'),
     path('practice/playsong', views.periodic_update_entire_range, name='playsong'),
     path('practice/process', views.audio_processing, name='process_audio'),
+    path('practice/upload_audio/', views.upload_audio, name='upload_audio'),
 ]
 

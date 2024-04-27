@@ -1014,9 +1014,14 @@
         </div>
         <div class="notes-section">
           <div><button id="connectButton">Connect</button></div>
-          <div><button id="startButton">Start</button></div>
-          <div><button id="endButton">End</button></div>
+          <div>
+            <button id="startButton" onclick="startRecording()">Start</button>
+          </div>
+          <div>
+            <button id="endButton" onclick="stopRecording()">End</button>
+          </div>
           <div><button id="replayButton">Replay</button></div>
+          <audio id="audioPlayback" controls></audio>
           <div>
             <a
               href="https://www.youtube.com/watch?v=ZuJXffpXs08"
@@ -1279,6 +1284,111 @@
           });
       }
 
+      // helper function to find the most common line in every five lines
+      function findMostCommonLine(group) {
+        const lineCount = {};
+        let maxLine = "";
+        let maxCount = 0;
+
+        // Count each line's occurrences in the group
+        group.forEach((line) => {
+          if (lineCount[line]) {
+            lineCount[line]++;
+          } else {
+            lineCount[line] = 1;
+          }
+
+          // Check if this line is now the most common
+          if (lineCount[line] > maxCount) {
+            maxLine = line;
+            maxCount = lineCount[line];
+          }
+        });
+
+        return maxLine;
+      }
+
+      // process the fingering info
+      function fingeringProcess(text) {
+        const lines = text.split(/\r?\n/);
+        const lineFrac = 5;
+        let filteredBuffer = [];
+        for (const line of lines) {
+          if (line.length == 23) {
+            filteredBuffer.push(line);
+          }
+        }
+        let result = [];
+        // Process groups of lines
+        for (let i = 0; i < filteredBuffer.length; i += lineFrac) {
+          const group = filteredBuffer.slice(i, i + lineFrac); // Get next group of 5 lines
+          result.push(findMostCommonLine(group)); // Find and add the most common line
+        }
+        return result;
+      }
+
+      // start and end recording logic
+      let mediaRecorder;
+      let audioChunks = [];
+
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = []; // Reset chunks at the start
+
+          mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+          };
+
+          mediaRecorder.start();
+        } catch (error) {
+          console.error("Error accessing the microphone:", error);
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+
+            // Create FormData and append the audio file
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "recording.wav");
+
+            // Send the audio file to the server
+            fetch("upload_audio/", {
+              method: "POST",
+              body: formData,
+            })
+              .then((response) => response.json())
+              .then((data) => console.log(data))
+              .catch((error) => console.error("Error:", error));
+
+            audioChunks = [];
+          };
+        }
+      }
+
+      mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.wav");
+
+        fetch("upload_audio", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => console.log(data))
+          .catch((error) => console.error("Error:", error));
+
+        audioChunks = [];
+      });
+
       // Automatically send get requests every 0.1 second to trigger current updates
       // setInterval(sendHttpRequest, 100);
 
@@ -1397,12 +1507,6 @@
         document
           .getElementById("endButton")
           .addEventListener("click", async function () {
-            console.log(buffer);
-            let lines = buffer.split("\n");
-            let numberOfLines = lines.length;
-            let writer;
-            console.log("Number of lines:", numberOfLines);
-
             if (port && port.writable) {
               try {
                 const writer = port.writable.getWriter();
@@ -1428,6 +1532,24 @@
             updateRefFingering("end");
             updateRefDescription("end");
 
+            currNote.style.display = "none";
+            noteMessage.style.display = "none";
+            feedbackBox.style.display = "none";
+            currIndicator.style.display = "none";
+            currFingering.style.display = "none";
+          });
+
+        document
+          .getElementById("replayButton")
+          .addEventListener("click", function () {
+            console.log(buffer);
+            let lines = buffer.split("\n");
+            let numberOfLines = lines.length;
+            let writer;
+            console.log("Number of lines:", numberOfLines);
+            const result = fingeringProcess(buffer);
+            console.log(result);
+
             fetch("process", {
               method: "GET",
             })
@@ -1447,11 +1569,6 @@
                 }
               })
               .catch((error) => console.error("Fetch error:", error));
-          });
-
-        document
-          .getElementById("replayButton")
-          .addEventListener("click", function () {
             currNote.style.display = "block";
             noteMessage.style.display = "block";
             feedbackBox.style.display = "block";

@@ -1014,9 +1014,14 @@
         </div>
         <div class="notes-section">
           <div><button id="connectButton">Connect</button></div>
-          <div><button id="startButton">Start</button></div>
-          <div><button id="endButton">End</button></div>
+          <div>
+            <button id="startButton" onclick="startRecording()">Start</button>
+          </div>
+          <div>
+            <button id="endButton" onclick="stopRecording()">End</button>
+          </div>
           <div><button id="replayButton">Replay</button></div>
+          <audio id="audioPlayback" controls></audio>
           <div>
             <a
               href="https://www.youtube.com/watch?v=ZuJXffpXs08"
@@ -1321,6 +1326,68 @@
         }
         return result;
       }
+
+      // start and end recording logic
+      let mediaRecorder;
+      let audioChunks = [];
+
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = []; // Reset chunks at the start
+
+          mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+          };
+
+          mediaRecorder.start();
+        } catch (error) {
+          console.error("Error accessing the microphone:", error);
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+
+            // Create FormData and append the audio file
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "recording.wav");
+
+            // Send the audio file to the server
+            fetch("upload_audio/", {
+              method: "POST",
+              body: formData,
+            })
+              .then((response) => response.json())
+              .then((data) => console.log(data))
+              .catch((error) => console.error("Error:", error));
+
+            audioChunks = [];
+          };
+        }
+      }
+
+      mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.wav");
+
+        fetch("upload_audio", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => console.log(data))
+          .catch((error) => console.error("Error:", error));
+
+        audioChunks = [];
+      });
 
       // Automatically send get requests every 0.1 second to trigger current updates
       // setInterval(sendHttpRequest, 100);

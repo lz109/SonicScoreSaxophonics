@@ -6,8 +6,10 @@ from django.contrib.auth import logout
 from django.shortcuts import HttpResponseRedirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+import os
 import json
 import subprocess
+from django.conf import settings
 from .models import CustomUser
   
 
@@ -188,6 +190,25 @@ def periodic_update_entire_range(request):
         'refFingering': fingering,
         'next': nextUp
     })
+
+@csrf_exempt
+def upload_audio(request):
+    if request.method == 'POST':
+        audio_file = request.FILES.get('audio')
+        if audio_file:
+            # Save the file or process it
+            save_path = os.path.join(settings.BASE_DIR, 'static', 'audio', audio_file.name)
+            handle_audio_file(audio_file)
+            with open(save_path, 'wb+') as destination:
+                for chunk in audio_file.chunks():
+                    destination.write(chunk)
+            return JsonResponse({'status': 'success', 'message': 'Audio uploaded successfully'})
+    return JsonResponse({'status': 'error', 'message': 'An error occurred'})
+
+def handle_audio_file(f):
+    with open('static/audio/audio.mp3', 'wb+') as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
     
 
 

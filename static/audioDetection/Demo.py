@@ -6,6 +6,7 @@ from scipy.signal import butter, lfilter
 from scipy.signal import butter, sosfilt, sosfreqz
 import sys
 from scipy.fft import rfft, rfftfreq
+import soundfile as sf
 
 def preprocess_audio_with_snr_check(audio_path):
     y, sr = librosa.load(audio_path)
@@ -36,7 +37,7 @@ def butter_bandpass_filter(data, lowcut, highcut, sr, order=5):
     y = sosfilt(sos, data)
     return y
 
-def transpose_notes(notes, semitones=2):
+def transpose_notes(notes, semitones=0):
     transposed_notes = []
     for note in notes:
         if note is not None:
@@ -91,7 +92,12 @@ def detect_pitch(data, sr, tempo):
         if dominant_freq_db > db_threshold and dominant_freq > 90.0 and dominant_freq < 700:
             note = librosa.hz_to_note(dominant_freq)
             notes.append(note)
-            dominant_frequencies.append(dominant_freq)
+        else:
+            notes.append('R')
+
+        dominant_frequencies.append(dominant_freq)
+
+    #notes = transpose_notes(notes, semitones=0)
 
     return notes, dominant_frequencies
 
@@ -130,34 +136,34 @@ def integrate_notes(noteList, beatList, tempo, beat_fraction=8):
 
     for note, beat in zip(noteList, beatList):
         if beat == 1:
-            if (current_note != None):
-                current_note = note
-                if current_note == previous_note:
-                    note_duration += fraction_duration
-                else:
-                    # A new note starts, append the previous note and reset duration
-                    integrated_notes.append(Note(current_note, round(note_duration, 1)))
-                    current_note = note
-                    note_duration = fraction_duration
-            else:
-                # This is the first note
-                current_note = note
-                note_duration = fraction_duration
-        else: #beat==0
-            # Note is held, increase its duration
+            if current_note is not None and note != current_note:
+                # Append the previous note with its duration and start the new note
+                integrated_notes.append(Note(current_note, round(note_duration, 1)))
+                note_duration = 0  # Reset the duration for the new note
+            current_note = note  # Set or update the current note
+        # Always add the fraction duration as long as the current note is set
+        if current_note is not None:
             note_duration += fraction_duration
 
-        previous_note = current_note  # Update the previous note
-
-    # Append the last note after the loop ends
-    if current_note:
-        if current_note == previous_note:
-            # Add the last note's duration to the last element if it's the same note
-            integrated_notes[-1].length += round(note_duration, 1)
-        else:
-            integrated_notes.append(Note(current_note, round(note_duration, 1)))
+    # Ensure the last note is added
+    if current_note is not None and note_duration > 0:
+        integrated_notes.append(Note(current_note, round(note_duration, 1)))
 
     return integrated_notes
+
+
+'''def adjust_note_durations(notes):
+    i = 0
+    while i < len(notes):
+        if notes[i].length < 0:
+            if i > 0:  # there is a previous note
+                notes[i - 1].length = round(notes[i - 1].length + notes[i].length / 2, 1)
+            if i + 1 < len(notes):  # there is a next note
+                notes[i + 1].length = round(notes[i + 1].length + notes[i].length / 2, 1)
+            notes.pop(i)
+        else:
+            i += 1
+    return notes'''
 
 
 def plot_frequency_curve(frequencies, sr, hop_length):
@@ -168,14 +174,26 @@ def plot_frequency_curve(frequencies, sr, hop_length):
     plt.title('Frequency Curve')
     plt.show()
 
-def load_and_trim_audio(audio_path, sr=None, trim_start_sec=0.5):
+def plot_spectrogram(audio_path):
     # Load the audio file
-    y, sr = librosa.load(audio_path, sr=sr)
-    trim_samples = int(trim_start_sec * sr)
-    # Trim the start of the audio
-    y_trimmed = y[trim_samples:]
+    y, sr = librosa.load(audio_path, sr=None)  # sr=None to preserve original sampling rate
+
+    # Compute the Short-Time Fourier Transform (STFT)
+    D = librosa.stft(y)
     
-    return y_trimmed, sr
+    # Convert amplitude to decibels
+    D_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+    
+    # Plot the spectrogram
+    plt.figure(figsize=(10, 4))
+    librosa.display.specshow(D_db, sr=sr, x_axis='time', y_axis='log', cmap='coolwarm')
+    plt.colorbar(format='%+2.0f dB')
+    plt.title('Spectrogram')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    plt.tight_layout()
+    plt.show()
+
 
 def preprocess_and_threshold_audio(y, threshold_ratio=0.1, sr=None):
     # Load the audio file
@@ -196,31 +214,42 @@ def main(audio_path):
         return'''
     #y, sr=load_and_trim_audio(audio_path)
     #y, sr = preprocess_and_threshold_audio(audio_path)
-    y, sr = librosa.load(audio_path, sr = 22050)
+    y, sr = librosa.load(audio_path, sr = None)
+    #y_slow = librosa.effects.time_stretch(y, rate=1)
+    #sf.write('slowed_down_output.wav', y_slow, sr)
+    #y = y_slow
+    print("sr",sr)
+    duration_in_seconds = len(y) / sr
 
     # Apply the band-pass filter
     lowcut = 20.0
     highcut = 4500.0
-    filtered_y = butter_bandpass_filter(y, lowcut, highcut, sr, order=6)
-    #filtered_y = y
+    #filtered_y = butter_bandpass_filter(y, lowcut, highcut, sr, order=6)
+    filtered_y = y
  
     tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
+    eighth_note_duration = 60 / tempo / 8
+    hop_length = int(eighth_note_duration * sr)
+    print("tempo", tempo)
+    print("hop", hop_length/sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    #print("Array of Notes:", notes)
+    print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    #print("Rhythm Array:", rhythm_array)
+    print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
+    #integrated_notes = adjust_note_durations(integrated_notes)
     print("result:", integrated_notes)
 
-    #plot_frequency_curve(frequencies, sr, hop_length)
+    plot_frequency_curve(frequencies, sr, hop_length)
+    #plot_spectrogram('B_flat_2.wav')
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python script_name.py <path_to_audio_file>")
+        print("invalid")
         sys.exit(1)  # Exit the script with an error status
 
     audio_file = sys.argv[1]

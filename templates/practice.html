@@ -1020,7 +1020,9 @@
           <div>
             <button id="endButton" onclick="stopRecording()">End</button>
           </div>
-          <div><button id="replayButton">Replay</button></div>
+          <div>
+            <button id="replayButton" onclick="replayClicked()">Replay</button>
+          </div>
           <audio id="audioPlayback" controls></audio>
           <div>
             <a
@@ -1389,6 +1391,72 @@
         audioChunks = [];
       });
 
+      function replayClicked() {
+        console.log("clicking on replay");
+        fetch("process", {
+          method: "GET",
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("response was not ok");
+            }
+            console.log("error");
+            return response.json();
+          })
+          .then((data) => {
+            if (data.status === "success") {
+              console.log("Audio processed successfully:", data.result);
+              alert("Audio processed successfully: " + data.result);
+            } else {
+              console.error("Error:", data.message);
+              alert("Error processing audio: " + data.message);
+            }
+          })
+          .catch((error) => console.error("Fetch error:", error));
+        // currNote.style.display = "block";
+        // noteMessage.style.display = "block";
+        // feedbackBox.style.display = "block";
+        // currIndicator.style.display = "block";
+        // currFingering.style.display = "block";
+      }
+      // document
+      //   .getElementById("replayButton")
+      //   .addEventListener("click", async function () {
+      // console.log(buffer);
+      // let lines = buffer.split("\n");
+      // let numberOfLines = lines.length;
+      // let writer;
+      // console.log("Number of lines:", numberOfLines);
+      // const result = fingeringProcess(buffer);
+      // console.log(result);
+
+      //   fetch("process", {
+      //     method: "GET",
+      //   })
+      //     .then((response) => {
+      //       if (!response.ok) {
+      //         throw new Error("response was not ok");
+      //       }
+      //       console.log("error");
+      //       return response.json();
+      //     })
+      //     .then((data) => {
+      //       if (data.status === "success") {
+      //         console.log("Audio processed successfully:", data.result);
+      //         alert("Audio processed successfully: " + data.result);
+      //       } else {
+      //         console.error("Error:", data.message);
+      //         alert("Error processing audio: " + data.message);
+      //       }
+      //     })
+      //     .catch((error) => console.error("Fetch error:", error));
+      //   currNote.style.display = "block";
+      //   noteMessage.style.display = "block";
+      //   feedbackBox.style.display = "block";
+      //   currIndicator.style.display = "block";
+      //   currFingering.style.display = "block";
+      // });
+
       // Automatically send get requests every 0.1 second to trigger current updates
       // setInterval(sendHttpRequest, 100);
 
@@ -1537,43 +1605,6 @@
             feedbackBox.style.display = "none";
             currIndicator.style.display = "none";
             currFingering.style.display = "none";
-          });
-
-        document
-          .getElementById("replayButton")
-          .addEventListener("click", function () {
-            console.log(buffer);
-            let lines = buffer.split("\n");
-            let numberOfLines = lines.length;
-            let writer;
-            console.log("Number of lines:", numberOfLines);
-            const result = fingeringProcess(buffer);
-            console.log(result);
-
-            fetch("process", {
-              method: "GET",
-            })
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error("response was not ok");
-                }
-                return response.json();
-              })
-              .then((data) => {
-                if (data.status === "success") {
-                  console.log("Audio processed successfully:", data.result);
-                  alert("Audio processed successfully: " + data.result);
-                } else {
-                  console.error("Error:", data.message);
-                  alert("Error processing audio: " + data.message);
-                }
-              })
-              .catch((error) => console.error("Fetch error:", error));
-            currNote.style.display = "block";
-            noteMessage.style.display = "block";
-            feedbackBox.style.display = "block";
-            currIndicator.style.display = "block";
-            currFingering.style.display = "block";
           });
       });
 

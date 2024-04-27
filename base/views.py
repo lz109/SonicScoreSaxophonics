@@ -106,8 +106,7 @@ def statistics(request):
     return render(request, "statistics.html")
 
 def audio_processing(request):
-    # later replace it with a file generated from request
-    file_path = "static/audio/test.wav"
+    file_path = "static/audio/recording.wav"
     try:
         # Process the audio file
         result = process_audio(file_path)
@@ -196,17 +195,12 @@ def upload_audio(request):
     if request.method == 'POST':
         audio_file = request.FILES.get('audio')
         if audio_file:
-            # Save the file or process it
-            save_path = os.path.join(settings.BASE_DIR, 'static', 'audio', audio_file.name)
             handle_audio_file(audio_file)
-            with open(save_path, 'wb+') as destination:
-                for chunk in audio_file.chunks():
-                    destination.write(chunk)
             return JsonResponse({'status': 'success', 'message': 'Audio uploaded successfully'})
     return JsonResponse({'status': 'error', 'message': 'An error occurred'})
 
 def handle_audio_file(f):
-    with open('static/audio/audio.mp3', 'wb+') as destination:
+    with open('static/audio/recording.wav', 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
     

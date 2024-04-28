@@ -11,6 +11,7 @@ import json
 import subprocess
 from django.conf import settings
 from .models import CustomUser
+from pydub import AudioSegment
   
 
 notes = []
@@ -200,9 +201,31 @@ def upload_audio(request):
     return JsonResponse({'status': 'error', 'message': 'An error occurred'})
 
 def handle_audio_file(f):
-    with open('static/audio/recording.wav', 'wb+') as destination:
+    with open('static/audio/recording.mp3', 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
-    
+    sound = AudioSegment.from_file('static/audio/recording.mp3')
+    sound.export('static/audio/recording.wav', format="wav")
 
+@csrf_exempt
+def upload_fingering(request):
+    if request.method == 'POST':
+        content = request.body.decode('utf-8')
+        with open('static/results/fingering_output.txt', 'w') as file:
+            file.write(content)
+        return JsonResponse({'status': 'success', 'message': 'Fingering file created successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'An error occurred'})
+    
+# integrate audio_output.txt, fingering_output.txt, ref audio and ref fingering, store the sync results as a list or in a file
+# TODO: implement
+@csrf_exempt
+def integration(request):
+    return JsonResponse({'status': 'success', 'message': 'Not implemented'})
+
+# get sync result, display as feedback
+# TODO: implement
+@csrf_exempt
+def get_feedback(request):
+    return JsonResponse({'status': 'success', 'message': 'Not implemented'})
 

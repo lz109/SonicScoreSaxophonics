@@ -37,7 +37,7 @@ def butter_bandpass_filter(data, lowcut, highcut, sr, order=5):
     y = sosfilt(sos, data)
     return y
 
-def transpose_notes(notes, semitones=2):
+def transpose_notes(notes, semitones):
     transposed_notes = []
     for note in notes:
         if note is not None and note != 'R':
@@ -97,7 +97,7 @@ def detect_pitch(data, sr, tempo):
 
         dominant_frequencies.append(dominant_freq)
 
-    notes = transpose_notes(notes, semitones=2)
+    notes = transpose_notes(notes, semitones=14)
 
     return notes, dominant_frequencies
 
@@ -218,7 +218,7 @@ def main(audio_path):
     #y_slow = librosa.effects.time_stretch(y, rate=1)
     #sf.write('slowed_down_output.wav', y_slow, sr)
     #y = y_slow
-    # print("sr",sr)
+    print("sr",sr)
     duration_in_seconds = len(y) / sr
 
     # Apply the band-pass filter
@@ -230,20 +230,20 @@ def main(audio_path):
     tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
     eighth_note_duration = 60 / tempo / 8
     hop_length = int(eighth_note_duration * sr)
-    # print("tempo", tempo)
-    # print("hop", hop_length/sr)
+    print("tempo", tempo)
+    print("hop", hop_length/sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    # print("Array of Notes:", notes)
+    print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    # print("Rhythm Array:", rhythm_array)
+    print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
     #integrated_notes = adjust_note_durations(integrated_notes)
-    print(integrated_notes)
+    print("result:", integrated_notes)
 
-    # plot_frequency_curve(frequencies, sr, hop_length)
+    plot_frequency_curve(frequencies, sr, hop_length)
     #plot_spectrogram('B_flat_2.wav')
 
 

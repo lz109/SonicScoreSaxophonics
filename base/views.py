@@ -9,15 +9,49 @@ from django.views.decorators.csrf import csrf_exempt
 import os
 import json
 import subprocess
+import wave
+import math
 from django.conf import settings
 from .models import CustomUser
+from pydub import AudioSegment
+
   
 
 notes = []
 fingerings = []
+processed_notes = []
+processed_fingering = []
 index = -1
 currFingering = "00000000000000000000000"
 currNote = "notDetected"
+interval = 0
+m = 5
+idx = 0
+curr_time = 0
+curr_notes_time = 0
+curr_notes_idx = 0
+ref_notes_time = 0
+ref_notes_idx = 0
+ref_fingering_time = 0
+ref_fingering_idx = 0
+
+def read_tuple_data(file_path):
+    audio_data = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            if line.strip():
+                note, duration = line.strip().split(',')
+                audio_data.append((note, float(duration)))
+    return audio_data
+
+def read_line_data(file_path):
+    fingerings = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            cleaned_line = line.strip()
+            if cleaned_line:
+                fingerings.append(cleaned_line)
+    return fingerings
 
 # process the audio with a .wav file
 def process_audio(file):
@@ -34,7 +68,7 @@ def process_audio(file):
             output += "\n"
         else:
             output += s
-    output_file_path = 'static/results/audio_output.txt'  # Adjust path as necessary
+    output_file_path = 'static/results/audio_output.txt'
 
     with open(output_file_path, 'w') as file:
         file.write(output)
@@ -43,12 +77,8 @@ def process_audio(file):
 
 def load_data():
     global notes, fingerings
-    # use two files to keep track of the notes and fingering, later can get the
-    # song by parsing request, and then change the files this function reads
-    with open("static/files/entire_range_notes.txt", 'r') as note_file:
-        notes = note_file.read().splitlines()
-    with open("static/files/entire_range_fingerings.txt", 'r') as fingering_file:
-        fingerings = fingering_file.read().splitlines()
+    notes = read_tuple_data('static/files/b_flat_notes.txt')
+    fingerings = read_tuple_data('static/files/b_flat_fingerings.txt')
 
 # later replace it, each time press start send a request to load the data
 load_data()
@@ -62,10 +92,20 @@ def learn(request):
     return render(request, "learn.html") 
 
 def practice(request):
-    global index, currFingering, currNote
+    global index, currFingering, currNote, interval, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
     index = -1
     currFingering = "00000000000000000000000"
     currNote = "notDetected"
+    interval = 0
+    m = 5
+    idx = 0
+    curr_time = 0
+    curr_notes_time = 0
+    curr_notes_idx = 0
+    ref_notes_time = 0
+    ref_notes_idx = 0
+    ref_fingering_time = 0
+    ref_fingering_idx = 0
     return render(request, "practice.html")
 
 @csrf_exempt
@@ -81,8 +121,8 @@ def practice_update(request):
                 note = "end"
                 fingering = "end"
             else:
-                note = notes[index]
-                fingering = fingerings[index]
+                note = notes[index][0]
+                fingering = fingerings[index][0]
         return JsonResponse({
             'refNote': note,
             'refFingering': fingering,
@@ -173,16 +213,16 @@ def periodic_update_entire_range(request):
     if (index < 0):
         note = "start"
         fingering = "start"
-        nextUp = "NextUp: " + notes[index+1]
+        nextUp = "NextUp: " + notes[index+1][0]
     else:
         if (index >= len(notes)):
             note = "end"
             fingering = "end"
             nextUp = "The end of Practice"
         else:
-            note = notes[index]
-            fingering = fingerings[index]
-            nextUp = "NextUp: " + notes[index+1] if index < len(notes) - 1 else "The end of Practice"
+            note = notes[index][0]
+            fingering = fingerings[index][0]
+            nextUp = "NextUp: " + notes[index+1][0] if index < len(notes) - 1 else "The end of Practice"
     
     return JsonResponse({
         'refNote': note,
@@ -200,9 +240,132 @@ def upload_audio(request):
     return JsonResponse({'status': 'error', 'message': 'An error occurred'})
 
 def handle_audio_file(f):
-    with open('static/audio/recording.wav', 'wb+') as destination:
+    with open('static/audio/recording.mp3', 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
+    sound = AudioSegment.from_file('static/audio/recording.mp3')
+    sound.export('static/audio/recording.wav', format="wav")
+
+@csrf_exempt
+def upload_fingering(request):
+    if request.method == 'POST':
+        content = request.body.decode('utf-8')
+        with open('static/results/fingering_output.txt', 'w') as file:
+            file.write(content)
+        return JsonResponse({'status': 'success', 'message': 'Fingering file created successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'An error occurred'})
     
+# integrate audio_output.txt, fingering_output.txt, ref audio and ref fingering, store the sync results as a list or in a file
+# TODO: implement
+@csrf_exempt
+def integration(request):
+    global interval, processed_notes, processed_fingering, curr_notes_idx, idx
+    # for debug
+    audio_path = 'static/results/debug_audio.txt'
+    processed_notes = read_tuple_data(audio_path)
+    # for debug
+    fingering_path = 'static/results/debug_fingering.txt'
+    processed_fingering = read_line_data(fingering_path)
+    total_time = sum(duration for note, duration in processed_notes)
+    lines = len(processed_fingering)
+    if lines == 0:
+        return JsonResponse({'status': 'error', 'message': 'No fingering data'})
+    interval = total_time / lines
+    if processed_notes[0][0] == "R":
+        curr_notes_idx += 1
+        idx += math.ceil(processed_notes[0][1] / interval)
+        print(idx)
+    return JsonResponse({'status': 'success', 'message': 'interval', 'data': interval})
+
+def is_note_equal(note1, note2):
+    # Direct comparison if they are exactly the same
+    if note1 == note2:
+        return True
+    
+    # Create a mapping of notes to their immediate higher and lower notes
+    scale = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+    # Find indices in the scale
+    index1 = scale.index(note1[:-1])  # remove the octave for matching
+    index2 = scale.index(note2[:-1])  # remove the octave for matching
+    
+    # Check adjacent notes, considering octave changes
+    octave_diff = int(note1[-1]) - int(note2[-1])
+    if octave_diff == 0 and abs(index1 - index2) == 1:  # same octave, adjacent notes
+        return True
+    elif octave_diff != 0:
+        # Check for boundary cases (e.g., B3 and C4)
+        if (note1[:-1] == 'B' and note2[:-1] == 'C' and octave_diff == -1) or \
+           (note1[:-1] == 'C' and note2[:-1] == 'B' and octave_diff == 1):
+            return True
+    return False
+
+# get sync result, display as feedback
+# TODO: implement
+@csrf_exempt
+def get_feedback(request):
+    global notes, fingerings, processed_notes, processed_fingering, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
+    if idx >= len(processed_fingering):
+        return JsonResponse({'status': 'error', 'message': 'No fingering data'})
+    curr_fingering = processed_fingering[idx]
+    curr_time += interval
+    # problem to be solved: idx exceeds
+    while(curr_notes_time < curr_time):
+        if curr_notes_idx >= len(processed_notes):
+            return JsonResponse({'status': 'error', 'message': 'No notes data'})
+        curr_notes_time += processed_notes[curr_notes_idx][1]
+        curr_notes_idx += 1
+    curr_audio = processed_notes[curr_notes_idx-1][0]
+
+    while(ref_notes_time < curr_time):
+        if ref_notes_idx >= len(notes):
+            return JsonResponse({'status': 'error', 'message': 'No ref notes data'})
+        ref_notes_time += notes[ref_notes_idx][1]
+        ref_notes_idx += 1
+    ref_audio = notes[ref_notes_idx-1][0]
+
+    while(ref_fingering_time < curr_time):
+        if ref_fingering_idx >= len(fingerings):
+            return JsonResponse({'status': 'error', 'message': 'No ref fingering data'})
+        ref_fingering_time += fingerings[ref_fingering_idx][1]
+        ref_fingering_idx += 1
+    ref_fingering = fingerings[ref_fingering_idx-1][0]
+
+    idx += 1
 
 
+
+    if (curr_fingering == ref_fingering) and ((curr_audio == ref_audio) or (len(curr_audio) == 3 and is_note_equal(curr_audio, ref_audio))):
+        m -= 1
+        return JsonResponse({
+        'status': 'success',
+        'message': 'Current fingering and audio data',
+        'data': {
+            'current_fingering': ref_fingering,
+            'current_audio': ref_audio,
+            'ref_audio': ref_audio,
+            'ref_fingering': ref_fingering
+        }
+    })
+    m += 1
+    if (m <= 5):
+        return JsonResponse({
+        'status': 'success',
+        'message': 'Current fingering and audio data',
+        'data': {
+            'current_fingering': ref_fingering,
+            'current_audio': ref_audio,
+            'ref_audio': ref_audio,
+            'ref_fingering': ref_fingering
+        }
+    })
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Current fingering and audio data',
+        'data': {
+            'current_fingering': curr_fingering,
+            'current_audio': curr_audio,
+            'ref_audio': ref_audio,
+            'ref_fingering': ref_fingering
+        }
+    })

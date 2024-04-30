@@ -13,5 +13,8 @@ urlpatterns = [
     path('practice/playsong', views.periodic_update_entire_range, name='playsong'),
     path('practice/process', views.audio_processing, name='process_audio'),
     path('practice/upload_audio/', views.upload_audio, name='upload_audio'),
+    path('practice/upload_fingering/', views.upload_fingering, name='upload_fingering'),
+    path('practice/integration/', views.integration, name='integration'),
+    path('practice/get_feedback/', views.get_feedback, name='get_feedback'),
 ]
 

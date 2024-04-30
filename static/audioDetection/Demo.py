@@ -37,15 +37,15 @@ def butter_bandpass_filter(data, lowcut, highcut, sr, order=5):
     y = sosfilt(sos, data)
     return y
 
-def transpose_notes(notes, semitones=0):
+def transpose_notes(notes, semitones=2):
     transposed_notes = []
     for note in notes:
-        if note is not None:
+        if note is not None and note != 'R':
             midi_note = librosa.note_to_midi(note) + semitones
             transposed_note = librosa.midi_to_note(midi_note)
             transposed_notes.append(transposed_note)
         else:
-            transposed_notes.append(None)
+            transposed_notes.append('R')
     return transposed_notes
 
 def detect_pitch(data, sr, tempo):
@@ -89,7 +89,7 @@ def detect_pitch(data, sr, tempo):
         dominant_freq_db = yf_db[idx]
         db_threshold = 20
         # Filter and convert frequency to music note if above the dB threshold and significantly above zero
-        if dominant_freq_db > db_threshold and dominant_freq > 90.0 and dominant_freq < 700:
+        if dominant_freq_db > db_threshold and dominant_freq > 70.0 and dominant_freq < 800:
             note = librosa.hz_to_note(dominant_freq)
             notes.append(note)
         else:
@@ -97,7 +97,7 @@ def detect_pitch(data, sr, tempo):
 
         dominant_frequencies.append(dominant_freq)
 
-    #notes = transpose_notes(notes, semitones=0)
+    notes = transpose_notes(notes, semitones=2)
 
     return notes, dominant_frequencies
 

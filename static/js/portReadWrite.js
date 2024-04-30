@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const feedbackBox = document.getElementById("feedback-box");
   const currIndicator = document.getElementById("currIndicator");
   const currFingering = document.getElementById("currFingering");
+  const nextNote = document.getElementById("next-note");
   let port, reader, writer;
   let textDecoder = new TextDecoderStream();
 
@@ -69,6 +70,7 @@ document.addEventListener("DOMContentLoaded", function () {
       feedbackBox.style.display = "none";
       currIndicator.style.display = "none";
       currFingering.style.display = "none";
+      nextNote.style.display = "block";
 
       if (port && port.writable) {
         const writer = port.writable.getWriter();
@@ -160,5 +162,6 @@ document.addEventListener("DOMContentLoaded", function () {
       feedbackBox.style.display = "none";
       currIndicator.style.display = "none";
       currFingering.style.display = "none";
+      nextNote.style.display = "block";
     });
 });

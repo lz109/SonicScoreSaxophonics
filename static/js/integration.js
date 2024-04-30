@@ -94,10 +94,9 @@ async function replayClicked() {
 
     if (data1.status === "success") {
       console.log("Audio processed successfully:", data1.result);
-      alert("Audio processed successfully: " + data1.result);
     } else {
       console.error("Error processing audio:", data1.message);
-      alert("Error processing audio: " + data1.message);
+
       return;
     }
 
@@ -137,6 +136,17 @@ async function replayClicked() {
               feedbackData.data.current_fingering
             );
             updateCurrNote(feedbackData.data.current_audio);
+            updateFeedback(
+              feedbackData.data.ref_audio,
+              feedbackData.data.current_audio,
+              feedbackData.data.ref_fingering,
+              feedbackData.data.current_fingering
+            );
+            updateMessage(
+              feedbackData.data.ref_audio,
+              feedbackData.data.current_audio
+            );
+            updateRefDescription(feedbackData.data.ref_audio);
           }
         } catch (feedbackError) {
           console.error("Error fetching feedback:", feedbackError);
@@ -157,4 +167,5 @@ async function replayClicked() {
   document.getElementById("feedback-box").style.display = "block";
   document.getElementById("currIndicator").style.display = "block";
   document.getElementById("currFingering").style.display = "block";
+  document.getElementById("next-note").style.display = "none";
 }

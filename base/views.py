@@ -10,6 +10,7 @@ import os
 import json
 import subprocess
 import wave
+import math
 from django.conf import settings
 from .models import CustomUser
 from pydub import AudioSegment
@@ -67,7 +68,7 @@ def process_audio(file):
             output += "\n"
         else:
             output += s
-    output_file_path = 'static/results/audio_output.txt'  # Adjust path as necessary
+    output_file_path = 'static/results/audio_output.txt'
 
     with open(output_file_path, 'w') as file:
         file.write(output)
@@ -76,8 +77,8 @@ def process_audio(file):
 
 def load_data():
     global notes, fingerings
-    notes = read_tuple_data('static/files/entire_range_notes.txt')
-    fingerings = read_tuple_data('static/files/entire_range_fingerings.txt')
+    notes = read_tuple_data('static/files/b_flat_notes.txt')
+    fingerings = read_tuple_data('static/files/b_flat_fingerings.txt')
 
 # later replace it, each time press start send a request to load the data
 load_data()
@@ -259,8 +260,9 @@ def upload_fingering(request):
 # TODO: implement
 @csrf_exempt
 def integration(request):
-    global interval, processed_notes, processed_fingering
-    audio_path = 'static/results/audio_output.txt'
+    global interval, processed_notes, processed_fingering, curr_notes_idx, idx
+    # for debug
+    audio_path = 'static/results/debug_audio.txt'
     processed_notes = read_tuple_data(audio_path)
     # for debug
     fingering_path = 'static/results/debug_fingering.txt'
@@ -270,7 +272,33 @@ def integration(request):
     if lines == 0:
         return JsonResponse({'status': 'error', 'message': 'No fingering data'})
     interval = total_time / lines
+    if processed_notes[0][0] == "R":
+        curr_notes_idx += 1
+        idx += math.ceil(processed_notes[0][1] / interval)
+        print(idx)
     return JsonResponse({'status': 'success', 'message': 'interval', 'data': interval})
+
+def is_note_equal(note1, note2):
+    # Direct comparison if they are exactly the same
+    if note1 == note2:
+        return True
+    
+    # Create a mapping of notes to their immediate higher and lower notes
+    scale = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+    # Find indices in the scale
+    index1 = scale.index(note1[:-1])  # remove the octave for matching
+    index2 = scale.index(note2[:-1])  # remove the octave for matching
+    
+    # Check adjacent notes, considering octave changes
+    octave_diff = int(note1[-1]) - int(note2[-1])
+    if octave_diff == 0 and abs(index1 - index2) == 1:  # same octave, adjacent notes
+        return True
+    elif octave_diff != 0:
+        # Check for boundary cases (e.g., B3 and C4)
+        if (note1[:-1] == 'B' and note2[:-1] == 'C' and octave_diff == -1) or \
+           (note1[:-1] == 'C' and note2[:-1] == 'B' and octave_diff == 1):
+            return True
+    return False
 
 # get sync result, display as feedback
 # TODO: implement
@@ -287,7 +315,6 @@ def get_feedback(request):
             return JsonResponse({'status': 'error', 'message': 'No notes data'})
         curr_notes_time += processed_notes[curr_notes_idx][1]
         curr_notes_idx += 1
-        print(curr_notes_time)
     curr_audio = processed_notes[curr_notes_idx-1][0]
 
     while(ref_notes_time < curr_time):
@@ -306,15 +333,16 @@ def get_feedback(request):
 
     idx += 1
 
-    # fix sharp issues
-    if (curr_fingering == ref_fingering) and (curr_audio == ref_audio):
+
+
+    if (curr_fingering == ref_fingering) and ((curr_audio == ref_audio) or (len(curr_audio) == 3 and is_note_equal(curr_audio, ref_audio))):
         m -= 1
         return JsonResponse({
         'status': 'success',
         'message': 'Current fingering and audio data',
         'data': {
-            'current_fingering': curr_fingering,
-            'current_audio': curr_audio,
+            'current_fingering': ref_fingering,
+            'current_audio': ref_audio,
             'ref_audio': ref_audio,
             'ref_fingering': ref_fingering
         }

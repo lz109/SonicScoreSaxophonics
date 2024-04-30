@@ -106,6 +106,9 @@ function updateCurrFingering(refFingering, currFingering) {
 // update current note
 function updateCurrNote(note) {
   var newText = "Played Note: " + note + "<br>";
+  if (note == "R") {
+    newText = "No Note detected";
+  }
   document.getElementById("curr-note").innerHTML = newText;
 }
 
@@ -123,7 +126,7 @@ function updateMessage(refNote, currNote) {
     newText = "The practice session ends!<br><br>";
   } else if (refNote == currNote) {
     newText = "You played the note correctly!<br><br>";
-  } else if (currNote == "notDetected") {
+  } else if (currNote == "R") {
     newText = "Your note is not detected.<br><br>";
   } else {
     newText =
@@ -143,7 +146,7 @@ function updateFeedback(refNote, currNote, refFingering, currFingering) {
   } else if (refFingering == currFingering && refNote == currNote) {
     newText =
       "Your fingering and note pitch match with the reference. Good Job!";
-  } else if (currNote == "NotDetected") {
+  } else if (currNote == "R") {
     newText =
       "Your note is not detected. If you are playing, please check the microphone.";
   } else if (refFingering == currFingering && refNote != currNote) {
@@ -153,6 +156,7 @@ function updateFeedback(refNote, currNote, refFingering, currFingering) {
     newText =
       "Your fingering is incorrect. Please adjust fingering based on the fingering diagram.";
   }
+  console.log(newText);
   document.getElementById("feedback").innerHTML = newText;
 }
 

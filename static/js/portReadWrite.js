@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("replayButton")
     .addEventListener("click", async function () {
       console.log(buffer);
+      // debug
+      buffer += "00000000000000000000000";
       fetch("upload_fingering/", {
         method: "POST",
         body: buffer,

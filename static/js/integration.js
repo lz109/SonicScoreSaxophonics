@@ -113,7 +113,36 @@ async function replayClicked() {
     const data2 = await response2.json();
 
     if (data2.status === "success") {
-      console.log("Integration done");
+      console.log("Integration done:", data2.data);
+      const intervalInSeconds = data2.data * 1000; // Convert seconds to milliseconds
+
+      // Set up the interval to fetch feedback
+      const feedbackInterval = setInterval(async () => {
+        try {
+          const feedbackResponse = await fetch("get_feedback", {
+            method: "GET",
+          });
+
+          if (!feedbackResponse.ok) {
+            throw new Error("Feedback request failed");
+          }
+
+          const feedbackData = await feedbackResponse.json();
+          console.log(feedbackData);
+          if (feedbackData.status == "success") {
+            updateRefFingering(feedbackData.data.ref_fingering);
+            updateRefNote(feedbackData.data.ref_audio);
+            updateCurrFingering(
+              feedbackData.data.ref_fingering,
+              feedbackData.data.current_fingering
+            );
+            updateCurrNote(feedbackData.data.current_audio);
+          }
+        } catch (feedbackError) {
+          console.error("Error fetching feedback:", feedbackError);
+          clearInterval(feedbackInterval); // Stop the interval on error
+        }
+      }, intervalInSeconds);
     } else {
       console.error("Error in integration:", data2.message);
       alert("Error in integration: " + data2.message);
@@ -121,9 +150,6 @@ async function replayClicked() {
   } catch (error) {
     console.error("Fetch error:", error);
   }
-
-  // may fetch the feedback and use update functions to start displaying the integrated result
-  // TODO: implement
 
   // Elements display update
   document.getElementById("curr-note").style.display = "block";

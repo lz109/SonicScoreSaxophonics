@@ -136,14 +136,17 @@ def integrate_notes(noteList, beatList, tempo, beat_fraction=8):
 
     for note, beat in zip(noteList, beatList):
         if beat == 1:
-            if current_note is not None and note != current_note:
-                # Append the previous note with its duration and start the new note
-                integrated_notes.append(Note(current_note, round(note_duration, 1)))
-                note_duration = 0  # Reset the duration for the new note
-            current_note = note  # Set or update the current note
-        # Always add the fraction duration as long as the current note is set
-        if current_note is not None:
-            note_duration += fraction_duration
+            if current_note is None:
+                current_note = note  # Initialize the first note
+                note_duration = fraction_duration  # Start counting duration from the first note
+            elif note == current_note:
+                note_duration += fraction_duration  # Increment duration for the same consecutive note
+            else:
+                if current_note is not None:
+                    # Append the previous note with its duration
+                    integrated_notes.append(Note(current_note, round(note_duration, 1)))
+                current_note = note  # Set the new note
+                note_duration = fraction_duration  # Start duration counting for new note
 
     # Ensure the last note is added
     if current_note is not None and note_duration > 0:
@@ -172,6 +175,28 @@ def plot_frequency_curve(frequencies, sr, hop_length):
     plt.xlabel('Time (s)')
     plt.ylabel('Frequency (Hz)')
     plt.title('Frequency Curve')
+    plt.show()
+
+def plot_frequency_curve_2(frequencies, sr, hop_length, notes):
+    time_axis = np.arange(len(frequencies)) * (hop_length / sr)
+    plt.figure(figsize=(14, 6))  # Adjusted for better visibility of annotations
+    plt.plot(time_axis, frequencies, label='Frequency')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    plt.title('Frequency Curve with Notes')
+
+    last_note = None
+    last_time = 0
+    annotation_gap = 0.5  # Minimum time in seconds between annotations of the same note
+
+    # Annotate notes on the plot
+    for idx, (note, time) in enumerate(zip(notes, time_axis)):
+        if note != 'R' and note != last_note or (note == last_note and time - last_time >= annotation_gap):
+            plt.annotate(note, (time, frequencies[idx]), textcoords="offset points", xytext=(0,10), ha='center')
+            last_note = note
+            last_time = time
+
+    plt.legend()
     plt.show()
 
 def plot_spectrogram(audio_path):
@@ -227,23 +252,24 @@ def main(audio_path):
     #filtered_y = butter_bandpass_filter(y, lowcut, highcut, sr, order=6)
     filtered_y = y
  
-    tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
+    #tempo, _ = librosa.beat.beat_track(y=filtered_y, sr=sr)
+    tempo = 60
     eighth_note_duration = 60 / tempo / 8
     hop_length = int(eighth_note_duration * sr)
-    # print("tempo", tempo)
-    # print("hop", hop_length/sr)
+    #print("tempo", tempo)
+    #print("hop", hop_length/sr)
 
     notes, frequencies = detect_pitch(filtered_y, sr, tempo)
-    # print("Array of Notes:", notes)
+    #print("Array of Notes:", notes)
 
     rhythm_array, hop_length = detect_rhythm(filtered_y, sr, tempo)
-    # print("Rhythm Array:", rhythm_array)
+    #print("Rhythm Array:", rhythm_array)
 
     integrated_notes = integrate_notes(notes, rhythm_array, tempo, beat_fraction=8)
     #integrated_notes = adjust_note_durations(integrated_notes)
     print(integrated_notes)
 
-    # plot_frequency_curve(frequencies, sr, hop_length)
+    #plot_frequency_curve_2(frequencies, sr, hop_length, notes)
     #plot_spectrogram('B_flat_2.wav')
 
 

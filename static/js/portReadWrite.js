@@ -55,14 +55,6 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("startButton")
     .addEventListener("click", async function () {
-      const response = await fetch("load_data", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" }, // Assuming you're sending plain text
-        body: "b_flat",
-      });
-      const data = await response.json();
-      console.log(data);
-
       buffer = "";
       if (intervalId !== null) {
         clearInterval(intervalId);

@@ -8,7 +8,7 @@
   <body>
     <div class="practice-page">
       <div class="song-name">
-        <h1>Currently Practicing: B flat Test</h1>
+        <h1>Currently Practicing: Entire Range</h1>
       </div>
       <div class="info-section">
         <div class="fingering-section">
@@ -55,6 +55,10 @@
         <div class="notes-section">
           <script src="{% static 'js/recording.js' %}"></script>
           <div><button id="connectButton">Connect</button></div>
+          <div>
+            <button id="switchButton" onclick="switchSong()">Switch</button>
+            <script src="{% static 'js/switch.js' %}"></script>
+          </div>
           <div>
             <button id="startButton" onclick="startRecording()">Start</button>
           </div>

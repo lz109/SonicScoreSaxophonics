@@ -25,7 +25,7 @@ index = -1
 currFingering = "00000000000000000000000"
 currNote = "notDetected"
 interval = 0
-m = 5
+m = 10
 idx = 0
 curr_time = 0
 curr_notes_time = 0
@@ -34,6 +34,7 @@ ref_notes_time = 0
 ref_notes_idx = 0
 ref_fingering_time = 0
 ref_fingering_idx = 0
+
 
 def read_tuple_data(file_path):
     audio_data = []
@@ -80,22 +81,20 @@ def load_data(request):
     name = request.body.decode('utf-8')
     file_note_name = 'static/files/' + name + '_notes.txt'
     file_fingering_name = 'static/files/' + name + '_fingerings.txt'
-    # for debug
     notes = read_tuple_data(file_note_name)
-    # for debug
     fingerings = read_tuple_data(file_fingering_name)
     return JsonResponse({})
 
 # process_audio("static/audio/test.wav")
+notes = read_tuple_data('static/files/entire_range_notes.txt')
+fingerings = read_tuple_data('static/files/entire_range_fingerings.txt')
 
-def home(request): 
-    return render(request, "home.html") 
-  
-def learn(request): 
-    return render(request, "learn.html") 
-
-def practice(request):
-    global index, currFingering, currNote, interval, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
+def reset():
+    global notes, fingerings, processed_notes, processed_fingering, index, currFingering, currNote, interval, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
+    notes = read_tuple_data('static/files/entire_range_notes.txt')
+    fingerings = read_tuple_data('static/files/entire_range_fingerings.txt')
+    processed_notes = []
+    processed_fingering = []
     index = -1
     currFingering = "00000000000000000000000"
     currNote = "notDetected"
@@ -109,6 +108,15 @@ def practice(request):
     ref_notes_idx = 0
     ref_fingering_time = 0
     ref_fingering_idx = 0
+
+def home(request): 
+    return render(request, "home.html") 
+  
+def learn(request): 
+    return render(request, "learn.html") 
+
+def practice(request):
+    reset()
     return render(request, "practice.html")
 
 @csrf_exempt
@@ -336,8 +344,6 @@ def get_feedback(request):
 
     idx += 1
 
-
-
     if (curr_fingering == ref_fingering) and ((curr_audio == ref_audio) or (len(curr_audio) == 3 and is_note_equal(curr_audio, ref_audio))):
         m -= 1
         return JsonResponse({
@@ -350,8 +356,12 @@ def get_feedback(request):
             'ref_fingering': ref_fingering
         }
     })
-    m += 1
-    if (m <= 5):
+
+    # need further testing
+    if (m < 20):
+        m += 1
+
+    if (m <= 10):
         return JsonResponse({
         'status': 'success',
         'message': 'Current fingering and audio data',

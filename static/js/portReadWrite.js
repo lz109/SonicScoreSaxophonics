@@ -130,8 +130,8 @@ document.addEventListener("DOMContentLoaded", function () {
       updateRefDescription("start");
 
       setTimeout(function () {
-        intervalId = setInterval(updateCurrentSong, 2000);
-      }, 2000);
+        intervalId = setInterval(updateCurrentSong, 1000);
+      }, 1000);
     });
 
   // press end button to end displaying reference note

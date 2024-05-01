@@ -163,7 +163,6 @@ async function replayClicked() {
 
   // Elements display update
   document.getElementById("curr-note").style.display = "block";
-  document.getElementById("note-message").style.display = "block";
   document.getElementById("feedback-box").style.display = "block";
   document.getElementById("currIndicator").style.display = "block";
   document.getElementById("currFingering").style.display = "block";

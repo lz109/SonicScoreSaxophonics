@@ -132,7 +132,7 @@ function updateMessage(refNote, currNote) {
     newText =
       "You played " + currNote + " instead of correct " + refNote + ".<br><br>";
   }
-  document.getElementById("note-message").innerHTML = newText;
+  // document.getElementById("note-message").innerHTML = newText;
 }
 
 // update the feedback

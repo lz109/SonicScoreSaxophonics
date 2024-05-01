@@ -3,7 +3,7 @@
 document.addEventListener("DOMContentLoaded", function () {
   let buffer = "";
   const currNote = document.getElementById("curr-note");
-  const noteMessage = document.getElementById("note-message");
+  // const noteMessage = document.getElementById("note-message");
   const feedbackBox = document.getElementById("feedback-box");
   const currIndicator = document.getElementById("currIndicator");
   const currFingering = document.getElementById("currFingering");
@@ -15,8 +15,6 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("replayButton")
     .addEventListener("click", async function () {
       console.log(buffer);
-      // debug
-      buffer += "00000000000000000000000";
       fetch("upload_fingering/", {
         method: "POST",
         body: buffer,
@@ -37,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
           // This call is now inside a user gesture event
           port = await navigator.serial.requestPort();
-          await port.open({ baudRate: 300 });
+          await port.open({ baudRate: 9600 });
 
           port.readable.pipeTo(textDecoder.writable).catch((error) => {
             console.error("Stream pipe failed:", error);
@@ -57,16 +55,24 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("startButton")
     .addEventListener("click", async function () {
+      const response = await fetch("load_data", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" }, // Assuming you're sending plain text
+        body: "b_flat",
+      });
+      const data = await response.json();
+      console.log(data);
+
       buffer = "";
       if (intervalId !== null) {
         clearInterval(intervalId);
         intervalId = null;
       }
-      document.getElementById("note-message").innerHTML =
-        "The practice session will start soon.<br><br>";
+      // document.getElementById("note-message").innerHTML =
+      //   "The practice session will start soon.<br><br>";
       songReset();
       currNote.style.display = "none";
-      noteMessage.style.display = "none";
+      // noteMessage.style.display = "none";
       feedbackBox.style.display = "none";
       currIndicator.style.display = "none";
       currFingering.style.display = "none";
@@ -124,8 +130,8 @@ document.addEventListener("DOMContentLoaded", function () {
       updateRefDescription("start");
 
       setTimeout(function () {
-        intervalId = setInterval(updateCurrentSong, 3000);
-      }, 3000);
+        intervalId = setInterval(updateCurrentSong, 2000);
+      }, 2000);
     });
 
   // press end button to end displaying reference note
@@ -151,14 +157,14 @@ document.addEventListener("DOMContentLoaded", function () {
         clearInterval(intervalId);
         intervalId = null;
       }
-      document.getElementById("note-message").innerHTML =
-        "The practice session has ended.<br><br>";
+      // document.getElementById("note-message").innerHTML =
+      //   "The practice session has ended.<br><br>";
       updateRefNote("end");
       updateRefFingering("end");
       updateRefDescription("end");
 
       currNote.style.display = "none";
-      noteMessage.style.display = "none";
+      // noteMessage.style.display = "none";
       feedbackBox.style.display = "none";
       currIndicator.style.display = "none";
       currFingering.style.display = "none";

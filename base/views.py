@@ -74,14 +74,17 @@ def process_audio(file):
         file.write(output)
     return output
 
-
-def load_data():
+@csrf_exempt
+def load_data(request):
     global notes, fingerings
-    notes = read_tuple_data('static/files/b_flat_notes.txt')
-    fingerings = read_tuple_data('static/files/b_flat_fingerings.txt')
-
-# later replace it, each time press start send a request to load the data
-load_data()
+    name = request.body.decode('utf-8')
+    file_note_name = 'static/files/' + name + '_notes.txt'
+    file_fingering_name = 'static/files/' + name + '_fingerings.txt'
+    # for debug
+    notes = read_tuple_data(file_note_name)
+    # for debug
+    fingerings = read_tuple_data(file_fingering_name)
+    return JsonResponse({})
 
 # process_audio("static/audio/test.wav")
 
@@ -97,7 +100,7 @@ def practice(request):
     currFingering = "00000000000000000000000"
     currNote = "notDetected"
     interval = 0
-    m = 5
+    m = 10
     idx = 0
     curr_time = 0
     curr_notes_time = 0
@@ -262,10 +265,10 @@ def upload_fingering(request):
 def integration(request):
     global interval, processed_notes, processed_fingering, curr_notes_idx, idx
     # for debug
-    audio_path = 'static/results/debug_audio.txt'
+    audio_path = 'static/results/audio_output.txt'
     processed_notes = read_tuple_data(audio_path)
     # for debug
-    fingering_path = 'static/results/debug_fingering.txt'
+    fingering_path = 'static/results/fingering_output.txt'
     processed_fingering = read_line_data(fingering_path)
     total_time = sum(duration for note, duration in processed_notes)
     lines = len(processed_fingering)

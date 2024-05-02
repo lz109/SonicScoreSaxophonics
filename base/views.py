@@ -349,9 +349,10 @@ def get_feedback(request):
         if len(filtered_fingering) != 0:
             curr_fingering = filtered_fingering[0]
 
-    if ref_audio in filtered_notes:
-        curr_audio = ref_audio
-    else:
+    for note in filtered_notes:
+        if (is_note_equal(note, ref_audio)):
+            curr_audio = ref_audio
+    if (curr_audio == "R"):
         if len(filtered_notes) != 0:
             curr_audio = filtered_notes[0]
     

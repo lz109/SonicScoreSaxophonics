@@ -24,14 +24,17 @@ processed_fingering = []
 index = -1
 currFingering = "00000000000000000000000"
 currNote = "notDetected"
-
-inc = False
-interval = 0.5
-curr_time = 0
-offset = 0
-tolerance = 0.5
+interval = 0
+m = 8
 idx = 0
-duration = 0
+curr_time = 0
+curr_notes_time = 0
+curr_notes_idx = 0
+ref_notes_time = 0
+ref_notes_idx = 0
+ref_fingering_time = 0
+ref_fingering_idx = 0
+
 
 def read_tuple_data(file_path):
     audio_data = []
@@ -87,17 +90,24 @@ notes = read_tuple_data('static/files/entire_range_notes.txt')
 fingerings = read_tuple_data('static/files/entire_range_fingerings.txt')
 
 def reset():
-    global fingerings, processed_notes, processed_fingering, inc, interval, curr_time, offset, tolerance, idx, duration
+    global notes, fingerings, processed_notes, processed_fingering, index, currFingering, currNote, interval, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
+    notes = read_tuple_data('static/files/entire_range_notes.txt')
     fingerings = read_tuple_data('static/files/entire_range_fingerings.txt')
     processed_notes = []
     processed_fingering = []
-    inc = False
-    interval = 0.5
-    curr_time = 0
-    offset = 0
-    tolerance = 0.5
+    index = -1
+    currFingering = "00000000000000000000000"
+    currNote = "notDetected"
+    interval = 0
+    m = 8
     idx = 0
-    duration = 0
+    curr_time = 0
+    curr_notes_time = 0
+    curr_notes_idx = 0
+    ref_notes_time = 0
+    ref_notes_idx = 0
+    ref_fingering_time = 0
+    ref_fingering_idx = 0
 
 def home(request): 
     return render(request, "home.html") 
@@ -256,14 +266,12 @@ def upload_fingering(request):
         return JsonResponse({'status': 'success', 'message': 'Fingering file created successfully'})
     else:
         return JsonResponse({'status': 'error', 'message': 'An error occurred'})
-
-
+    
 # integrate audio_output.txt, fingering_output.txt, ref audio and ref fingering, store the sync results as a list or in a file
 # TODO: implement
 @csrf_exempt
 def integration(request):
-
-    global duration, processed_notes, processed_fingering, offset
+    global interval, processed_notes, processed_fingering, curr_notes_idx, idx
     # for debug
     audio_path = 'static/results/audio_output.txt'
     processed_notes = read_tuple_data(audio_path)
@@ -274,20 +282,22 @@ def integration(request):
     lines = len(processed_fingering)
     if lines == 0:
         return JsonResponse({'status': 'error', 'message': 'No fingering data'})
-    duration = total_time / lines
+    interval = total_time / lines
+    time = 0
+    while(len(processed_fingering[idx]) != 23 or processed_fingering[idx] == "00000000000000000000000"):
+        idx += 1
+        time += interval
+    accum_time = 0
+    while (accum_time < time):
+        accum_time += processed_notes[curr_notes_idx][1]
+        if (accum_time > time):
+            processed_notes[curr_notes_idx] = (processed_notes[curr_notes_idx][0], time - accum_time)
+            accum_time = time
+        else:
+            curr_notes_idx += 1
 
-    i = 0
-    while(len(processed_fingering[i]) != 23 or processed_fingering[i] == "00000000000000000000000"):
-        i += 1
-        offset += duration
-
-    # if processed_notes[0][0] == "R":
-    #     curr_notes_idx += 1
-    #     idx += math.ceil(processed_notes[0][1] / interval)
     #     print(idx)
-    # print(i, offset)
-
-    return JsonResponse({'status': 'success', 'message': 'interval', 'data': 0.5})
+    return JsonResponse({'status': 'success', 'message': 'interval', 'data': interval})
 
 def is_note_equal(note1, note2):
     # Direct comparison if they are exactly the same
@@ -315,43 +325,63 @@ def is_note_equal(note1, note2):
 # TODO: implement
 @csrf_exempt
 def get_feedback(request):
-    global inc, interval, curr_time, offset, tolerance, idx, duration
-
-    # 60%
-    filtered_notes = find_notes_with_minimum_duration(processed_notes, offset + curr_time - tolerance, offset + interval + curr_time + tolerance, 0.3)
-    # print(idx, offset + curr_time - tolerance, offset + interval + curr_time + tolerance, filtered_notes)
-
-    # 60%
-    filtered_fingering = filter_and_sort_fingerings(processed_fingering, offset + curr_time - tolerance, offset + interval + curr_time + tolerance, duration)
-    # print(idx, offset + curr_time - tolerance, offset + interval + curr_time + tolerance, filtered_fingering)
-
-    if idx >= len(fingerings):
+    global notes, fingerings, processed_notes, processed_fingering, m, idx, curr_time, curr_notes_time, curr_notes_idx, ref_notes_time, ref_notes_idx, ref_fingering_time, ref_fingering_idx
+    if idx >= len(processed_fingering):
         return JsonResponse({'status': 'error', 'message': 'No fingering data'})
-    # every 0.5 sec
-    ref_fingering = fingerings[idx][0]
-    ref_audio = notes[idx][0]
-    curr_fingering = "00000000000000000000000"
-    curr_audio = "R"
+    curr_fingering = processed_fingering[idx]
+    curr_time += interval
+    # problem to be solved: idx exceeds
+    while(curr_notes_time < curr_time):
+        if curr_notes_idx >= len(processed_notes):
+            return JsonResponse({'status': 'error', 'message': 'No notes data'})
+        curr_notes_time += processed_notes[curr_notes_idx][1]
+        curr_notes_idx += 1
+    curr_audio = processed_notes[curr_notes_idx-1][0]
 
-    curr_time += 0.5
-    if (not inc): inc = True
-    elif (inc): 
-        idx += 1
-        inc = False
+    while(ref_notes_time < curr_time):
+        if ref_notes_idx >= len(notes):
+            return JsonResponse({'status': 'error', 'message': 'No ref notes data'})
+        ref_notes_time += notes[ref_notes_idx][1]
+        ref_notes_idx += 1
+    ref_audio = notes[ref_notes_idx-1][0]
 
-    if ref_fingering in filtered_fingering:
-        curr_fingering = ref_fingering
-    else: 
-        if len(filtered_fingering) != 0:
-            curr_fingering = filtered_fingering[0]
+    while(ref_fingering_time < curr_time):
+        if ref_fingering_idx >= len(fingerings):
+            return JsonResponse({'status': 'error', 'message': 'No ref fingering data'})
+        ref_fingering_time += fingerings[ref_fingering_idx][1]
+        ref_fingering_idx += 1
+    ref_fingering = fingerings[ref_fingering_idx-1][0]
 
-    if ref_audio in filtered_notes:
-        curr_audio = ref_audio
-    else:
-        if len(filtered_notes) != 0:
-            curr_audio = filtered_notes[0]
-    
-        
+    idx += 1
+
+    if (curr_fingering == ref_fingering) and ((curr_audio == ref_audio) or (len(curr_audio) == 3 and is_note_equal(curr_audio, ref_audio))):
+        m -= 1
+        return JsonResponse({
+        'status': 'success',
+        'message': 'Current fingering and audio data',
+        'data': {
+            'current_fingering': ref_fingering,
+            'current_audio': ref_audio,
+            'ref_audio': ref_audio,
+            'ref_fingering': ref_fingering
+        }
+    })
+
+    # need further testing
+    if (m < 12):
+        m += 1
+
+    if (m <= 8):
+        return JsonResponse({
+        'status': 'success',
+        'message': 'Current fingering and audio data',
+        'data': {
+            'current_fingering': ref_fingering,
+            'current_audio': ref_audio,
+            'ref_audio': ref_audio,
+            'ref_fingering': ref_fingering
+        }
+    })
     return JsonResponse({
         'status': 'success',
         'message': 'Current fingering and audio data',
@@ -360,74 +390,7 @@ def get_feedback(request):
             'current_audio': curr_audio,
             'ref_audio': ref_audio,
             'ref_fingering': ref_fingering
-        }})
-    
-    
-    
-def find_notes_with_minimum_duration(notes, start, end, min_duration):
-    # Calculate start and end times for each note
-    times = []
-    current_time = 0
-    for note, duration in notes:
-        times.append((note, current_time, current_time + duration))
-        current_time += duration
-
-    # Calculate active durations for each note in the window
-    note_durations = {}
-    for note, note_start, note_end in times:
-        if note_end > start and note_start < end:
-            # Calculate overlapping duration
-            overlap_start = max(start, note_start)
-            overlap_end = min(end, note_end)
-            overlap_duration = overlap_end - overlap_start
-            if overlap_duration > 0:
-                if note in note_durations:
-                    note_durations[note] += overlap_duration
-                else:
-                    note_durations[note] = overlap_duration
-
-    # Filter notes that have a duration >= min_duration and sort them
-    filtered_notes = [(note, duration) for note, duration in note_durations.items() if duration >= min_duration]
-    filtered_notes.sort(key=lambda x: x[1], reverse=True)
-
-    sorted_notes = [note for note, _ in filtered_notes]
-
-    return sorted_notes
-
-
-def filter_and_sort_fingerings(fingerings, start, end, x):
-    current_time = 0
-    fingering_durations = []
-    added_fingerings = set()  # Set to keep track of added fingerings to avoid duplicates
-
-    # Iterate over each fingering with its duration
-    for fingering in fingerings:
-        # Calculate the start and end time for each fingering
-        fingering_start = current_time
-        fingering_end = current_time + x
-
-        # Update the current time for the next fingering
-        current_time += x
-
-        # Check if the fingering falls within the specified time window
-        if fingering_end > start and fingering_start < end:
-            # Calculate the overlap with the window
-            overlap_start = max(start, fingering_start)
-            overlap_end = min(end, fingering_end)
-            overlap_duration = overlap_end - overlap_start
-
-            # Check if the overlapping duration is at least 0.6x seconds and the fingering has not been added
-            if overlap_duration >= 0.6 * x and fingering not in added_fingerings:
-                fingering_durations.append((fingering, overlap_duration))
-                added_fingerings.add(fingering)  # Add fingering to the set to avoid future duplicates
-
-    # Sort the list of tuples by the overlap duration in descending order
-    fingering_durations.sort(key=lambda x: x[1], reverse=True)
-
-    # Extract sorted fingerings from the list of tuples
-    sorted_fingerings = [fingering for fingering, _ in fingering_durations]
-
-    return sorted_fingerings
-
+        }
+    })
 
 

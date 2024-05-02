@@ -25,14 +25,14 @@ index = -1
 currFingering = "00000000000000000000000"
 currNote = "notDetected"
 interval = 0
-m = 10
+m = 5
 idx = 0
 curr_time = 0
 curr_notes_time = 0
 curr_notes_idx = 0
-ref_notes_time = 0
+ref_notes_time = 1
 ref_notes_idx = 0
-ref_fingering_time = 0
+ref_fingering_time = 1
 ref_fingering_idx = 0
 
 
@@ -99,14 +99,14 @@ def reset():
     currFingering = "00000000000000000000000"
     currNote = "notDetected"
     interval = 0
-    m = 10
+    m = 5
     idx = 0
     curr_time = 0
     curr_notes_time = 0
     curr_notes_idx = 0
-    ref_notes_time = 0
+    ref_notes_time = 1
     ref_notes_idx = 0
-    ref_fingering_time = 0
+    ref_fingering_time = 1
     ref_fingering_idx = 0
 
 def home(request): 
@@ -283,10 +283,10 @@ def integration(request):
     if lines == 0:
         return JsonResponse({'status': 'error', 'message': 'No fingering data'})
     interval = total_time / lines
-    if processed_notes[0][0] == "R":
-        curr_notes_idx += 1
-        idx += math.ceil(processed_notes[0][1] / interval)
-        print(idx)
+    # if processed_notes[0][0] == "R":
+    #     curr_notes_idx += 1
+    #     idx += math.ceil(processed_notes[0][1] / interval)
+    #     print(idx)
     return JsonResponse({'status': 'success', 'message': 'interval', 'data': interval})
 
 def is_note_equal(note1, note2):
@@ -358,10 +358,10 @@ def get_feedback(request):
     })
 
     # need further testing
-    if (m < 20):
+    if (m < 15):
         m += 1
 
-    if (m <= 10):
+    if (m <= 5):
         return JsonResponse({
         'status': 'success',
         'message': 'Current fingering and audio data',

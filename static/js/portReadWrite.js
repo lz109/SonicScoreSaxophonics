@@ -11,21 +11,21 @@ document.addEventListener("DOMContentLoaded", function () {
   let port, reader, writer;
   let textDecoder = new TextDecoderStream();
 
-  document
-    .getElementById("replayButton")
-    .addEventListener("click", async function () {
-      console.log(buffer);
-      fetch("upload_fingering/", {
-        method: "POST",
-        body: buffer,
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => console.log(data))
-        .catch((error) => console.error("Error:", error));
-    });
+  // document
+  //   .getElementById("replayButton")
+  //   .addEventListener("click", async function () {
+  //     console.log(buffer);
+  //     fetch("upload_fingering/", {
+  //       method: "POST",
+  //       body: buffer,
+  //       headers: {
+  //         "Content-Type": "text/plain",
+  //       },
+  //     })
+  //       .then((response) => response.json())
+  //       .then((data) => console.log(data))
+  //       .catch((error) => console.error("Error:", error));
+  //   });
 
   // press connect button to connect
   document
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       setTimeout(function () {
         intervalId = setInterval(updateCurrentSong, 1000);
-      }, 1000);
+      }, 0);
     });
 
   // press end button to end displaying reference note
@@ -149,6 +149,19 @@ document.addEventListener("DOMContentLoaded", function () {
         clearInterval(intervalId);
         intervalId = null;
       }
+      
+      console.log(buffer);
+      fetch("upload_fingering/", {
+        method: "POST",
+        body: buffer,
+        headers: {
+          "Content-Type": "text/plain",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => console.log(data))
+        .catch((error) => console.error("Error:", error));
+
       // document.getElementById("note-message").innerHTML =
       //   "The practice session has ended.<br><br>";
       updateRefNote("end");

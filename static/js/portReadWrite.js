@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       setTimeout(function () {
         intervalId = setInterval(updateCurrentSong, 1000);
-      }, 0);
+      }, 2000);
     });
 
   // press end button to end displaying reference note
@@ -149,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
         clearInterval(intervalId);
         intervalId = null;
       }
-      
+
       console.log(buffer);
       fetch("upload_fingering/", {
         method: "POST",

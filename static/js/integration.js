@@ -77,9 +77,15 @@ function fingeringProcess(text) {
   return result;
 }
 
+let feedbackInterval = null;
 // the function when the replay button is clicked, responsible for sending integration requests
 async function replayClicked() {
   try {
+    if (feedbackInterval !== null) {
+      clearInterval(feedbackInterval);
+      feedbackInterval = null;
+    }
+
     // Process the audio
     console.log("clicking on replay");
     const response1 = await fetch("process", {
@@ -116,7 +122,7 @@ async function replayClicked() {
       const intervalInSeconds = data2.data * 1000; // Convert seconds to milliseconds
 
       // Set up the interval to fetch feedback
-      const feedbackInterval = setInterval(async () => {
+      feedbackInterval = setInterval(async () => {
         try {
           const feedbackResponse = await fetch("get_feedback", {
             method: "GET",

@@ -262,8 +262,12 @@ def upload_fingering(request):
 # TODO: implement
 @csrf_exempt
 def integration(request):
+    global duration, processed_notes, processed_fingering, offset, inc, curr_time, offset, idx
+    inc = False
+    curr_time = 0
+    offset = 0
+    idx = 0
 
-    global duration, processed_notes, processed_fingering, offset
     # for debug
     audio_path = 'static/results/audio_output.txt'
     processed_notes = read_tuple_data(audio_path)
